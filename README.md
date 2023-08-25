@@ -11,3 +11,9 @@ REPORT_GAS=true npx hardhat test
 npx hardhat node
 npx hardhat run scripts/deploy.js
 ```
+
+Install foundry:
+
+```shell
+curl -L https://foundry.paradigm.xyz | bash
+```

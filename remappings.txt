@@ -3,3 +3,4 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 @openzeppelin/=lib/openzeppelin-contracts
 solady/=lib/solady/src/
 kernel/=lib/kernel/src/
+src/=lib/kernel/src/
