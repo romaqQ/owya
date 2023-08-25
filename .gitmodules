@@ -5,11 +5,10 @@
 [submodule "lib/openzeppelin-contracts"]
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-	branch = v4.8.2
+	branch = release-v4.8
 [submodule "lib/solady"]
 	path = lib/solady
 	url = https://github.com/vectorized/solady
 [submodule "lib/kernel"]
 	path = lib/kernel
 	url = https://github.com/zerodevapp/kernel
-	branch = 5f8e8f46438e5920eb37d3c7c1e8717f07a213ce
