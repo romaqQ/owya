@@ -1,11 +1,16 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-foundry");
+require("@nomicfoundation/hardhat-ethers");
+
 require("dotenv").config();
 
 function getAccounts() {
   const accs = [];
   if (process.env.DEPLOYER_PRIVATE_KEY !== undefined) {
     accs.push(process.env.DEPLOYER_PRIVATE_KEY);
+  }
+  if (process.env.THIRD_PARTY_PRIVATE_KEY !== undefined) {
+    accs.push(process.env.THIRD_PARTY_PRIVATE_KEY);
   }
   if (process.env.PAYMASTER_OWNER_PRIVATE_KEY !== undefined) {
     accs.push(process.env.PAYMASTER_OWNER_PRIVATE_KEY);
@@ -67,6 +72,13 @@ module.exports = {
     optimismGoerli: {
       url: `https://optimism-goerli.infura.io/v3/${process.env.INFURA_ID}`,
       accounts: getAccounts(),
+    },
+  },
+  etherscan: {
+    apiKey: {
+      goerli: process.env.GOERLI_ETHERSCAN_API_KEY
+        ? process.env.GOERLI_ETHERSCAN_API_KEY
+        : "",
     },
   },
 };

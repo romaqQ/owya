@@ -7,10 +7,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  const COUNTER_ADDRESS = "0x13c00BFdE798330989A9474a8bAa0b9d7c4aD3eE";
-  const executor = await hre.ethers.deployContract("SimpleExecutor", [
-    COUNTER_ADDRESS,
-  ]);
+  const executor = await hre.ethers.deployContract("SimpleExecutor");
 
   await executor.waitForDeployment();
 

@@ -11,6 +11,4 @@ async function main() {
   console.log(`Kernel address: ${address}`);
 }
 
-// 1. Kernelfactory deployen so das funktioniert
-// 2. Validator austauschen -> enable modes testen
 main();

@@ -3,15 +3,10 @@ pragma solidity ^0.8.18;
 import "./Counter.sol";
 
 contract SimpleExecutor {
-    Counter counter;
+    event Toggled(address);
 
-
-    // Function to get the wallet kernel storage
-    constructor (address _counterAddress) {
-       counter = Counter(_counterAddress);
-    }
-
-    function toggleCounter() external {
-        counter.increaseNumber();
+    function toggleCounter(address _counter) external {
+        emit Toggled(msg.sender);
+        Counter(_counter).increaseNumber();
     }
 }

@@ -4,10 +4,15 @@ pragma solidity ^0.8.9;
 
 contract Counter {
     uint public number;
-    address lastTriggerAddress;
+
+    event Increased(address);    
+
+    function getNumber() view public returns(uint) {
+        return number;
+    }
     
     function increaseNumber() public {
-        lastTriggerAddress = msg.sender;
         number = number + 1;
+        emit Increased(msg.sender);
     }
 }
