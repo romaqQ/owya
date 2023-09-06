@@ -4,4 +4,4 @@ out = 'out'
 libs = ['lib']
 test = 'test'
 cache_path  = 'cache_forge'
-remappings = ['kernel/=lib/kernel/src/', 'src/=lib/kernel/src/']
+remappings = ['kernel/=lib/kernel/src/', 'src/=lib/kernel/src/', '@uniswap/v3-periphery/=lib/v3-periphery/']
