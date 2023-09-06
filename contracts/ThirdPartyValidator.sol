@@ -17,6 +17,7 @@ contract ThirdPartyValidator is IKernelValidator {
 
     function enable(bytes calldata _data) external payable override {
       address _provider = address(bytes20(_data[0:20]));
+      require(_provider != address(0));
       thirdPartyStorage[msg.sender].provider = _provider;
       emit ProviderAdded(msg.sender, _provider);
     }
