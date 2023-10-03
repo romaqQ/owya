@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import './UserManager.sol';
+import "./UserManager.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
@@ -12,21 +12,13 @@ interface IUniswapV3Router {
 }
 
 contract DCA {
-    address public uniswapV3Router;
-    UserManager public userManager;
-    uint24 public fee = 3000;  // 0.3% fee tier
 
-    constructor(address _uniswapV3Router, address _userManager) {
-        uniswapV3Router = _uniswapV3Router;
-        userManager = UserManager(_userManager);
-    }
-
-    function checkGuidelines(address user, uint256[] calldata amounts) public view returns (bool) {
+    function checkGuidelines(address user, address _userManager, uint256[] calldata amounts) public view returns (bool) {
+        UserManager userManager = UserManager(_userManager);
         uint256 totalAmount = 0;
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
-        // retrieve the user's assets
         address[] memory assets = userManager.userAssets(user);
         for (uint i = 0; i < assets.length; i++) {
             uint256 targetWeight = userManager.userTargetWeights(user, assets[i]);
@@ -35,17 +27,16 @@ contract DCA {
                 return false;
             }
         }
-
         return true;
     }
 
-    function executeDCA(uint256[] calldata amounts) external payable {
-        // check if the user is subscribed
+    function executeDCA(address _uniswapV3Router, address _userManager, uint24 _fee, uint256[] calldata amounts) external payable {
+        UserManager userManager = UserManager(_userManager);
         require(userManager.isUserSubscribed(msg.sender), "User is not subscribed");
 
         bool shouldCheckGuidelines = userManager.requireGuidelines(msg.sender);
         if (shouldCheckGuidelines) {
-            require(checkGuidelines(msg.sender, amounts), "Does not meet investment guidelines");
+            require(checkGuidelines(msg.sender, _userManager, amounts), "Does not meet investment guidelines");
         }
 
         address[] memory assets = userManager.userAssets(msg.sender);
@@ -53,22 +44,22 @@ contract DCA {
 
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i] != address(0)) {
-                _buyToken(assets[i], amounts[i]);
+                _buyToken(_uniswapV3Router, _fee, assets[i], amounts[i]);
             }
         }
     }
 
-    function _buyToken(address token, uint256 amountInETH) private {
-        uint256 deadline = block.timestamp + 15; // 15 seconds from the current block time
-        IUniswapV3Router(uniswapV3Router).exactInputSingle{value: amountInETH}(
-            address(0),  // ETH is the input
-            token,       // Token to buy
-            fee,         // Fee tier
-            msg.sender,  // Recipient
-            deadline,    // Deadline
-            amountInETH, // Amount in
-            0,           // Minimum amount out
-            0            // No price limit
+    function _buyToken(address _uniswapV3Router, uint24 _fee, address token, uint256 amountInETH) private {
+        uint256 deadline = block.timestamp + 15;
+        IUniswapV3Router(_uniswapV3Router).exactInputSingle{value: amountInETH}(
+            address(0),
+            token,
+            _fee,
+            msg.sender,
+            deadline,
+            amountInETH,
+            0,
+            0
         );
     }
 }
