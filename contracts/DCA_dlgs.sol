@@ -11,7 +11,7 @@ interface IUniswapV3Router {
     function exactInputSingle(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) external payable returns (uint256 amountOut);
 }
 
-contract DCA {
+contract DCA_DLGC {
 
     function checkGuidelines(address user, address _userManager, uint256[] calldata amounts) public view returns (bool) {
         UserManager userManager = UserManager(_userManager);

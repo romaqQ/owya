@@ -33,13 +33,14 @@ contract UserManager {
         _;
     }
 
-    function setUserAllocation(Asset[] memory assets, bool checkGuidelines) public canSubscribe {
+    function setUserAllocation(Asset[] memory assets, uint256 amount, bool checkGuidelines) public canSubscribe {
         uint256 totalWeight = 0;
         for (uint i = 0; i < assets.length; i++) {
             totalWeight += assets[i].weight;
         }
         require(totalWeight == TOTAL_BASIS_POINTS, "Total weights must equal 10,000 basis points");
         
+        userSubscriptionAmount[msg.sender] = amount;
         userAllocations[msg.sender] = assets;
         requireGuidelines[msg.sender] = checkGuidelines;
         isUserSubscribed[msg.sender] = true;
@@ -55,6 +56,11 @@ contract UserManager {
         require(newTotalWeight == TOTAL_BASIS_POINTS, "Total newWeights must equal 10,000 basis points");
         
         userAllocations[msg.sender] = newAssets;
+    }
+
+    function changeUserSubscriptionAmount(uint256 amount) public {
+        require(isUserSubscribed[msg.sender], "User is not subscribed");
+        userSubscriptionAmount[msg.sender] = amount;
     }
     
     function toggleSubscription() public {
