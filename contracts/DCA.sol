@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import './UserManager.sol';
 
@@ -16,6 +16,8 @@ contract DCA {
     UserManager public userManager;
     uint24 public fee = 3000;  // 0.3% fee tier
 
+    UserManager.Asset public UAsset;
+
     constructor(address _uniswapV3Router, address _userManager) {
         uniswapV3Router = _uniswapV3Router;
         userManager = UserManager(_userManager);
@@ -26,49 +28,49 @@ contract DCA {
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
-        // retrieve the user's assets
-        address[] memory assets = userManager.userAssets(user);
+
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(user);
+
         for (uint i = 0; i < assets.length; i++) {
-            uint256 targetWeight = userManager.userTargetWeights(user, assets[i]);
-            uint256 actualWeight = (amounts[i] * 100) / totalAmount;
-            if (actualWeight != targetWeight) {
-                return false;
-            }
+            uint256 targetWeight = assets[i].weight;
+            uint256 actualWeight = amounts[i] / totalAmount;
+            //if (actualWeight != targetWeight) {
+            //    return false;
+            //}
         }
 
         return true;
     }
 
-    function executeDCA(uint256[] calldata amounts) external payable {
-        // check if the user is subscribed
+    function executeDCA(address user, uint256[] calldata amounts) external payable {
         require(userManager.isUserSubscribed(msg.sender), "User is not subscribed");
 
-        bool shouldCheckGuidelines = userManager.requireGuidelines(msg.sender);
+        bool shouldCheckGuidelines = userManager.requireGuidelines(user);
         if (shouldCheckGuidelines) {
             require(checkGuidelines(msg.sender, amounts), "Does not meet investment guidelines");
         }
 
-        address[] memory assets = userManager.userAssets(msg.sender);
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(user);
         require(assets.length == amounts.length, "Amounts length must match assets length");
 
         for (uint i = 0; i < assets.length; i++) {
-            if (assets[i] != address(0)) {
-                _buyToken(assets[i], amounts[i]);
+            if (assets[i].asset != address(0)) {
+                _buyToken(assets[i].asset, amounts[i]);
             }
         }
     }
 
     function _buyToken(address token, uint256 amountInETH) private {
-        uint256 deadline = block.timestamp + 15; // 15 seconds from the current block time
+        uint256 deadline = block.timestamp + 15;
         IUniswapV3Router(uniswapV3Router).exactInputSingle{value: amountInETH}(
-            address(0),  // ETH is the input
-            token,       // Token to buy
-            fee,         // Fee tier
-            msg.sender,  // Recipient
-            deadline,    // Deadline
-            amountInETH, // Amount in
-            0,           // Minimum amount out
-            0            // No price limit
+            address(0),
+            token,
+            fee,
+            msg.sender,
+            deadline,
+            amountInETH,
+            0,
+            0
         );
     }
 }

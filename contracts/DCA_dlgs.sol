@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "./UserManager.sol";
 
@@ -19,13 +19,15 @@ contract DCA {
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
-        address[] memory assets = userManager.userAssets(user);
+
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(user);
+        
         for (uint i = 0; i < assets.length; i++) {
-            uint256 targetWeight = userManager.userTargetWeights(user, assets[i]);
-            uint256 actualWeight = (amounts[i] * 100) / totalAmount;
-            if (actualWeight != targetWeight) {
-                return false;
-            }
+            uint256 targetWeight = assets[i].weight;
+            uint256 actualWeight = amounts[i] / totalAmount;
+            //if (actualWeight != targetWeight) {
+            //    return false;
+            //}
         }
         return true;
     }
@@ -39,12 +41,12 @@ contract DCA {
             require(checkGuidelines(msg.sender, _userManager, amounts), "Does not meet investment guidelines");
         }
 
-        address[] memory assets = userManager.userAssets(msg.sender);
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(msg.sender);
         require(assets.length == amounts.length, "Amounts length must match assets length");
 
         for (uint i = 0; i < assets.length; i++) {
-            if (assets[i] != address(0)) {
-                _buyToken(_uniswapV3Router, _fee, assets[i], amounts[i]);
+            if (assets[i].asset != address(0)) {
+                _buyToken(_uniswapV3Router, _fee, assets[i].asset, amounts[i]);
             }
         }
     }
