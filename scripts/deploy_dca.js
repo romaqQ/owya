@@ -15,7 +15,13 @@ async function main() {
   await user_manager.waitForDeployment();
   console.log("UserManager deployed to:", user_manager.target);
 
-  // deploy the contracts
+  // deploy the delegateHandler
+  const DelegateHandler = await hre.ethers.getContractFactory("DelegateHandler");
+  const delegate_handler = await DelegateHandler.connect(deployer).deploy();
+  await delegate_handler.waitForDeployment();
+  console.log("DelegateHandler deployed to:", delegate_handler.target);
+
+  // deploy the dca contract
   const DCA = await hre.ethers.getContractFactory("DCA");
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
   const dca = await DCA.connect(deployer).deploy(UNISWAP_V3_ROUTER, user_manager.target);
