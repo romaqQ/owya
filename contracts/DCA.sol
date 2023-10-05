@@ -59,7 +59,7 @@ contract DCA {
             }
         }
     }
-
+    1 ether
     function _buyToken(address token, uint256 amountInETH) private {
         uint256 deadline = block.timestamp + 15;
         IUniswapV3Router(uniswapV3Router).exactInputSingle{value: amountInETH}(

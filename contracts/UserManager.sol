@@ -12,6 +12,8 @@ contract UserManager {
     }
 
     mapping(address => bool) public isUserSubscribed;
+    mapping(address => uint256) public userLastExecution;
+    mapping(address => uint256) public userSubscriptionAmount;
     mapping(address => Asset[]) public userAllocations;
     mapping(address => bool) public requireGuidelines;
     uint256 constant TOTAL_BASIS_POINTS = 10000;
