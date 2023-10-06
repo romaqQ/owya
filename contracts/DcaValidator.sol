@@ -42,7 +42,6 @@ contract ThirdPartyValidator is IKernelValidator {
         override
         returns (ValidationData validationData)
     {   
-        address addr;
         
         // the function signature of the function being called by DelegateHandler
         // "executeDCA(address,uint256[])" is represented by the first 4 bytes of the calldata
@@ -50,15 +49,16 @@ contract ThirdPartyValidator is IKernelValidator {
         // then we skip 0x24 = 32 bytes in hex (i.e. 36 bytes offset in total) to get the address of the user
         // the 32 bytes after the first 4 bytes represent the padded value of the length of dynamic data, if there is any
         // otherwise the 32 bytes are just 0s
-
+        bytes memory data = _userOp.callData;
+        address dcaContract;
         assembly {
-            addr := and(mload(add(calldataload(0x4), 0x24)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            dcaContract := and(mload(add(data, 0x24)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
         }
-        if (addr != executor[msg.sender]) {
+        
+        if (dcaContract != executor[msg.sender]) {
             return ValidationData.wrap(1); //Validation failed
         }
         // require(executor[msg.sender] == addr, "Invalid executor");
-        
         address signer = ECDSA.recover(_userOpHash, _userOp.signature);
         if (thirdPartyStorage[msg.sender].provider == signer) {
             return ValidationData.wrap(0);
