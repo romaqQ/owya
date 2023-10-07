@@ -9,7 +9,7 @@ struct ThirdPartyStorage {
     address provider;
 }
 
-contract ThirdPartyValidator is IKernelValidator {
+contract DcaValidator is IKernelValidator {
     event ProviderAdded(address indexed kernel, address indexed provider);
     event ProviderRemoved(address indexed kernel, address indexed provider);
 
@@ -35,6 +35,9 @@ contract ThirdPartyValidator is IKernelValidator {
         emit ProviderRemoved(msg.sender, _provider);
     }
 
+    function viewExecutor() external view returns (address) {
+        return executor[msg.sender];
+    }
 
     function validateUserOp(UserOperation calldata _userOp, bytes32 _userOpHash, uint256)
         external

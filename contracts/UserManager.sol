@@ -33,7 +33,11 @@ contract UserManager {
         _;
     }
 
-    function setUserAllocation(Asset[] memory assets, uint256 amount, bool checkGuidelines) public canSubscribe {
+    function subscribe(Asset[] memory assets, uint256 amount, bool checkGuidelines) public canSubscribe {
+        _setUserAllocation(assets, amount, checkGuidelines);
+    }
+
+    function _setUserAllocation(Asset[] memory assets, uint256 amount, bool checkGuidelines) internal {
         uint256 totalWeight = 0;
         for (uint i = 0; i < assets.length; i++) {
             totalWeight += assets[i].weight;

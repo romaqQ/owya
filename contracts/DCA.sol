@@ -15,12 +15,29 @@ contract DCA {
     address public uniswapV3Router;
     UserManager public userManager;
     uint24 public fee = 3000;  // 0.3% fee tier
-
-    UserManager.Asset public UAsset;
+    address owner;
 
     constructor(address _uniswapV3Router, address _userManager) {
         uniswapV3Router = _uniswapV3Router;
         userManager = UserManager(_userManager);
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only owner can call this function");
+        _;
+    }
+
+    function setUniswapV3Router(address _uniswapV3Router) external onlyOwner {
+        uniswapV3Router = _uniswapV3Router;
+    }
+
+    function setFee(uint24 _fee) external onlyOwner {
+        fee = _fee;
+    }
+
+    function setOwner(address _owner) external onlyOwner {
+        owner = _owner;
     }
 
     function checkGuidelines(address user, uint256[] calldata amounts) public view returns (bool) {
@@ -42,7 +59,7 @@ contract DCA {
         return true;
     }
 
-    function executeDCA(address user, uint256[] calldata amounts) external payable {
+    function execute(address user, uint256[] calldata amounts) external payable {
         require(userManager.isUserSubscribed(msg.sender), "User is not subscribed");
 
         bool shouldCheckGuidelines = userManager.requireGuidelines(user);
