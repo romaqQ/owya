@@ -7,7 +7,6 @@ contract UserManager {
 
     struct Asset {
         address asset;
-        string symbol;
         uint256 weight;
     }
 
@@ -33,11 +32,7 @@ contract UserManager {
         _;
     }
 
-    function subscribe(Asset[] memory assets, uint256 amount, bool checkGuidelines) public canSubscribe {
-        _setUserAllocation(assets, amount, checkGuidelines);
-    }
-
-    function _setUserAllocation(Asset[] memory assets, uint256 amount, bool checkGuidelines) internal {
+    function subscribe(Asset[] calldata assets, uint256 amount, bool checkGuidelines) public canSubscribe {
         uint256 totalWeight = 0;
         for (uint i = 0; i < assets.length; i++) {
             totalWeight += assets[i].weight;

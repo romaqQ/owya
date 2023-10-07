@@ -36,7 +36,7 @@ module.exports = {
       viaIR: true,
     },
   },
-  defaultNetwork: "goerli",
+  // defaultNetwork: "goerli",
   // alias: {
   //   "account-abstraction": "lib/account-abstraction/contracts/",
   //   "openzeppelin-contracts": "lib/openzeppelin-contracts/",

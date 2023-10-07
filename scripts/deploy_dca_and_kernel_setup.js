@@ -12,8 +12,19 @@ async function main() {
     await userManager.waitForDeployment();
     console.log("UserManager deployed at:", userManager.target);
 
-    // Deploy DCA contract
+    // Check if deployer can subscribe to userManager
+    const subscribeTx = await userManager.subscribe(
+        [{asset: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", weight: 10000}], 
+        ethers.parseEther("0.01"), 
+        true
+    );
+    await subscribeTx.wait();
 
+    // Check if deployer is subscribed to userManager
+    const isSubscribed1 = await userManager.isUserSubscribed(deployer.address);
+    console.log("Deployer subscribed to UserManager:", await isSubscribed1);
+
+    // Deploy DCA contract
     UNISWAP_V3_ROUTER=process.env.UNISWAP_V3_ROUTER;
     console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
     const DCA = await ethers.getContractFactory("DCA");
@@ -44,17 +55,30 @@ async function main() {
 
     // Deploy Kernel contract with kernel owner
     const kernelOwner = new ethers.Wallet(process.env.KERNEL_SIGNING_KEY);
-    // Deploy Kernel contract
-    const Kernel = await ethers.getContractFactory("Kernel");
-    const kernel = await Kernel.connect(kernelOwner).deploy();
-    await kernel.waitForDeployment();
-    console.log("Kernel deployed at:", kernel.target);
+    const kernel = await userop.Presets.Builder.Kernel.init(
+        kernelOwner,
+        process.env.GOERLI_RPC_URL
+    );
+
+    const tx0 = await kernel.execute({
+        to: deployer.address,
+        value: 0,
+        data: "0x",
+    });
+    
+    const res = await tx0.wait();
+    const accountAddress = kernel.getSender();
+    console.log(`Kernel address: ${accountAddress}`);
+
+    // const Kernel = await ethers.getContractFactory("Kernel");
+    //const kernel = await Kernel.connect(kernelOwner).deploy();
+    //await kernel.waitForDeployment();
 
     // From kernel contract execute subscribe function from UserManager contract    
-    const tx = await kernel.execute(
+    const tx = kernel.execute(
         userManager.target, // to
         0, // value
-        userManager.interface.encodeFunctionData("subscribe", [[{address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", weight: 10000}], ethers.utils.parseEther("0.01"), true]), // data
+        userManager.interface.encodeFunctionData("subscribe", [[{address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", weight: 10000}], ethers.parseEther("0.01"), true]), // data
         0 // operation
     );
     await tx.wait();
