@@ -44,18 +44,10 @@ async function main() {
 
     // Deploy Kernel contract with kernel owner
     const kernelOwner = new ethers.Wallet(process.env.KERNEL_SIGNING_KEY);
-    const KernelF = await userop.Presets.Builder.Kernel.init(
-        kernelOwner,
-        process.env.GOERLI_RPC_URL
-    ); 
-
     // Deploy Kernel contract
-    const kernel = await KernelF.deploy();
+    const Kernel = await ethers.getContractFactory("Kernel");
+    const kernel = await Kernel.connect(kernelOwner).deploy();
     await kernel.waitForDeployment();
-    
-    // const Kernel = await ethers.getContractFactory("Kernel");
-    //const kernel = await Kernel.connect(kernelOwner).deploy();
-    //await kernel.waitForDeployment();
     console.log("Kernel deployed at:", kernel.target);
 
     // From kernel contract execute subscribe function from UserManager contract    
