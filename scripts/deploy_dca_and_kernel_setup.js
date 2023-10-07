@@ -1,8 +1,7 @@
 const { ethers } = require("hardhat");
-const fs = require("fs");
-const path = require("path");
-
+const userop = require("userop");
 async function main() {
+    
     const [deployer] = await ethers.getSigners();
 
     console.log("Deploying contracts with the account:", deployer.address);
@@ -43,16 +42,41 @@ async function main() {
         throw new Error("ExecutorHandler address not set in DcaValidator");
     }
 
-    // Save all contract addresses to a file
-    const contractAddresses = {
-        UserManager: userManager.target,
-        DCA: dca.target,
-        ExecutorHandler: executorDelegate.target,
-        DcaValidator: dcaValidator.target,
-    };
-    const filePath = path.join(__dirname, "..", "DCAcontractAddresses.json");
-    fs.writeFileSync(filePath, JSON.stringify(contractAddresses, null, 2));
-    console.log("Contract addresses saved to file:", filePath);
+    // Deploy Kernel contract with kernel owner
+    const kernelOwner = new ethers.Wallet(process.env.KERNEL_SIGNING_KEY);
+    const KernelF = await userop.Presets.Builder.Kernel.init(
+        kernelOwner,
+        process.env.GOERLI_RPC_URL
+    ); 
+
+    // Deploy Kernel contract
+    const kernel = await KernelF.deploy();
+    await kernel.waitForDeployment();
+    
+    // const Kernel = await ethers.getContractFactory("Kernel");
+    //const kernel = await Kernel.connect(kernelOwner).deploy();
+    //await kernel.waitForDeployment();
+    console.log("Kernel deployed at:", kernel.target);
+
+    // From kernel contract execute subscribe function from UserManager contract    
+    const tx = await kernel.execute(
+        userManager.target, // to
+        0, // value
+        userManager.interface.encodeFunctionData("subscribe", [[{address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", weight: 10000}], ethers.utils.parseEther("0.01"), true]), // data
+        0 // operation
+    );
+    await tx.wait();
+    console.log("Kernel subscribed to UserManager");
+
+    // Check if kernel is subscribed to UserManager
+    const isSubscribed = await userManager.isSubscribed(kernel.target);
+    console.log("Kernel subscribed to UserManager:", isSubscribed);
+
+    // View user allocation
+    const userAllocation = await userManager.viewUserAllocation(kernel.target);
+    console.log("User allocation:", userAllocation);
+
+
 }
 
 main()
