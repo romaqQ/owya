@@ -1,5 +1,7 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
+const fs = require('fs');
+
 async function main() {
     
     const [deployer] = await ethers.getSigners();
@@ -55,43 +57,78 @@ async function main() {
 
     // Deploy Kernel contract with kernel owner
     const kernelOwner = new ethers.Wallet(process.env.KERNEL_SIGNING_KEY);
+
     const kernel = await userop.Presets.Builder.Kernel.init(
         kernelOwner,
         process.env.GOERLI_RPC_URL
     );
 
-    const tx0 = await kernel.execute({
-        to: deployer.address,
-        value: 0,
-        data: "0x",
-    });
-    
-    const res = await tx0.wait();
-    const accountAddress = kernel.getSender();
-    console.log(`Kernel address: ${accountAddress}`);
+    const client = await userop.Client.init(
+        process.env.GOERLI_RPC_URL
+    );       
+    const kernelAddress = kernel.getSender();
+    console.log(`Kernel address: ${kernelAddress}`);
+
+    const res = await client.sendUserOperation(
+        kernel.execute({
+          to: kernelOwner.address,
+          value: 0,
+          data: "0x",
+        })
+    );
+    console.log("Waiting for transaction...");
+    const ev = await res.wait();
+    console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
 
     // const Kernel = await ethers.getContractFactory("Kernel");
     //const kernel = await Kernel.connect(kernelOwner).deploy();
     //await kernel.waitForDeployment();
 
-    // From kernel contract execute subscribe function from UserManager contract    
-    const tx = kernel.execute(
-        userManager.target, // to
-        0, // value
-        userManager.interface.encodeFunctionData("subscribe", [[{address: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", symbol: "WETH", weight: 10000}], ethers.parseEther("0.01"), true]), // data
-        0 // operation
+    // From kernel contract execute subscribe function on UserManager contract    
+    const kernelSubTx = await client.sendUserOperation(
+        kernel.execute(
+            userManager.target, // to
+            0, // value
+            userManager.interface.encodeFunctionData(
+                "subscribe", 
+                [[{asset: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", weight: 10000}], 
+                ethers.parseEther("0.01"), 
+                true]), // data
+            0 // operation Operation.Call
+        )
     );
-    await tx.wait();
+    
+    await kernelSubTx.wait();
     console.log("Kernel subscribed to UserManager");
 
     // Check if kernel is subscribed to UserManager
-    const isSubscribed = await userManager.isSubscribed(kernel.target);
+    const isSubscribed = await userManager.isSubscribed(kernelAddress);
     console.log("Kernel subscribed to UserManager:", isSubscribed);
 
     // View user allocation
-    const userAllocation = await userManager.viewUserAllocation(kernel.target);
+    const userAllocation = await userManager.viewUserAllocation(kernelAddress);
     console.log("User allocation:", userAllocation);
 
+    // write all contract addresses to file
+    const addresses = {
+        "UserManager": userManager.target,
+        "DCA": dca.target,
+        "ExecutorHandler": executorDelegate.target,
+        "DcaValidator": dcaValidator.target,
+        "Kernel": kernelAddress
+    }
+
+    const data = JSON.stringify(addresses);
+    // filename shall contain a date and timestamp
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/:/g, "-");
+    const filename = `addresses_${timestamp}.json`;
+    fs.writeFile(filename, data, (err) => {
+        if (err) {
+            throw err;
+        }
+        console.log("JSON data is saved.");
+    });
 
 }
 
