@@ -15,7 +15,6 @@ function getAccounts() {
   if (process.env.KERNEL_SIGNING_KEY !== undefined) {
     accs.push(process.env.KERNEL_SIGNING_KEY);
   }
-  
   if (process.env.PAYMASTER_OWNER_PRIVATE_KEY !== undefined) {
     accs.push(process.env.PAYMASTER_OWNER_PRIVATE_KEY);
   }
