@@ -1,3 +1,4 @@
+
 const KernelAccountAbi = [
   {
     inputs: [
@@ -641,4 +642,5 @@ const KernelAccountAbi = [
   },
 ];
 
+// make this importable to another script
 module.exports = KernelAccountAbi;
