@@ -1,7 +1,6 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { KernelAccountABI } = require("../abi/KernelAccountAbi");
 const { getContractInstance } = require("../utils/utils");
 
 async function main() {
@@ -29,8 +28,8 @@ async function main() {
     );
   } else {
     const subscribeTx = await userManager.subscribe(
-      [{ asset: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", weight: 10000 }],
-      ethers.parseEther("0.01"),
+      [{ asset: process.env.WETH_ADDRESS_GOERLI, weight: 10000 }],
+      ethers.parseEther("0.001"),
       true
     );
     await subscribeTx.wait();
@@ -43,10 +42,11 @@ async function main() {
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
 
   const dca = await getContractInstance(
-    "DCA",
+    "DCAv1",
     process.env.DCA_CONTRACT_ADDRESS,
     deployer,
     UNISWAP_V3_ROUTER,
+    process.env.WETH_ADDRESS_GOERLI,
     userManagerAddress
   );
 
@@ -93,12 +93,12 @@ async function main() {
   console.log(`Kernel address: ${kernelAddress}`);
 
   // Send Ether to kernel contract
-  const tx = await kernelOwner.sendTransaction({
-    to: kernelAddress,
-    value: ethers.parseEther("0.005"),
-  });
-  await tx.wait();
-  console.log("Ether sent to kernel contract");
+  // const tx = await kernelOwner.sendTransaction({
+  //   to: kernelAddress,
+  //   value: ethers.parseEther("0.005"),
+  // });
+  // await tx.wait();
+  // console.log("Ether sent to kernel contract");
 
   // If Kernel is not yet deployed, deploy it
   const KERNEL_ADDRESS = process.env.KERNEL_ADDRESS;
@@ -132,7 +132,7 @@ async function main() {
         data: userManager.interface.encodeFunctionData("subscribe", [
           [
             {
-              asset: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+              asset: process.env.WETH_ADDRESS_GOERLI,
               weight: 10000,
             },
           ],
@@ -173,18 +173,20 @@ async function main() {
     Kernel: kernelAddress,
   };
 
-  const data = JSON.stringify(addresses);
-  const now = new Date();
-  const timestamp = now.toISOString().replace(/:/g, "-");
-  const filename = `${
-    (await ethers.provider.getNetwork()).name
-  }_addresses_${timestamp}.json`;
-  fs.writeFile(filename, data, (err) => {
-    if (err) {
-      throw err;
-    }
+  console.log("Addresses:", addresses);
+
+  if (Object.keys(addresses).length === 0) {
+    console.log("Addresses object is empty.");
+  } else {
+    const data = JSON.stringify(addresses, null, 2);
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/:/g, "-");
+    const filename = `${
+      (await ethers.provider.getNetwork()).name
+    }_addresses_${timestamp}.json`;
+    fs.writeFileSync(filename, data);
     console.log("JSON data is saved.");
-  });
+  }
 }
 
 main()

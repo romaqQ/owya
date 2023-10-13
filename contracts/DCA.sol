@@ -1,24 +1,53 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import './UserManager.sol';
+import "./UserManager.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
+
+    function transfer(
+        address recipient,
+        uint256 amount
+    ) external returns (bool);
+
+    function allowance(
+        address owner,
+        address spender
+    ) external view returns (uint256);
+
+    function approve(address spender, uint256 amount) external returns (bool);
 }
 
 interface IUniswapV3Router {
-    function exactInputSingle(address tokenIn, address tokenOut, uint24 fee, address recipient, uint256 deadline, uint256 amountIn, uint256 amountOutMinimum, uint160 sqrtPriceLimitX96) external payable returns (uint256 amountOut);
+    function exactInputSingle(
+        address tokenIn,
+        address tokenOut,
+        uint24 fee,
+        address recipient,
+        uint256 deadline,
+        uint256 amountIn,
+        uint256 amountOutMinimum,
+        uint160 sqrtPriceLimitX96
+    ) external payable returns (uint256 amountOut);
 }
 
-contract DCA {
-    address public uniswapV3Router;
-    UserManager public userManager;
-    uint24 public fee = 3000;  // 0.3% fee tier
-    address owner;
+interface IWETH is IERC20 {
+    function deposit() external payable;
 
-    constructor(address _uniswapV3Router, address _userManager) {
-        uniswapV3Router = _uniswapV3Router;
+    function withdraw(uint wad) external;
+}
+
+contract DCAv1 {
+    IUniswapV3Router public uniswapV3Router;
+    UserManager public userManager;
+    uint24 public fee = 3000; // 0.3% fee tier
+    address owner;
+    IWETH public weth;
+
+    constructor(address _uniswapV3Router, address _weth, address _userManager) {
+        uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
+        weth = IWETH(_weth);
         userManager = UserManager(_userManager);
         owner = msg.sender;
     }
@@ -29,7 +58,7 @@ contract DCA {
     }
 
     function setUniswapV3Router(address _uniswapV3Router) external onlyOwner {
-        uniswapV3Router = _uniswapV3Router;
+        uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
     }
 
     function setFee(uint24 _fee) external onlyOwner {
@@ -40,13 +69,18 @@ contract DCA {
         owner = _owner;
     }
 
-    function checkGuidelines(address user, uint256[] calldata amounts) public view returns (bool) {
+    function checkGuidelines(
+        address user,
+        uint256[] calldata amounts
+    ) public view returns (bool) {
         uint256 totalAmount = 0;
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
 
-        UserManager.Asset[] memory assets = userManager.viewUserAllocations(user);
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(
+            user
+        );
 
         for (uint i = 0; i < assets.length; i++) {
             uint256 targetWeight = assets[i].weight;
@@ -59,31 +93,55 @@ contract DCA {
         return true;
     }
 
-    function execute(address user, uint256[] calldata amounts) external payable {
-        require(userManager.isUserSubscribed(msg.sender), "User is not subscribed");
+    function execute(
+        address user,
+        uint256[] calldata amounts
+    ) external payable {
+        require(userManager.isUserSubscribed(user), "User is not subscribed");
 
-        bool shouldCheckGuidelines = userManager.requireGuidelines(user);
-        if (shouldCheckGuidelines) {
-            require(checkGuidelines(msg.sender, amounts), "Does not meet investment guidelines");
-        }
+        // bool shouldCheckGuidelines = userManager.requireGuidelines(user);
+        // if (shouldCheckGuidelines) {
+        //     require(
+        //         checkGuidelines(user, amounts),
+        //         "Does not meet investment guidelines"
+        //     );
+        // }
 
-        UserManager.Asset[] memory assets = userManager.viewUserAllocations(user);
-        require(assets.length == amounts.length, "Amounts length must match assets length");
+        UserManager.Asset[] memory assets = userManager.viewUserAllocations(
+            user
+        );
+        require(
+            assets.length == amounts.length,
+            "Amounts length must match assets length"
+        );
+        uint256 EthAmount = msg.value;
+
+        // Convert the received ETH to WETH first
+        // the owner is now this contract (DCAv1) as an intermediary step
+        weth.deposit{value: EthAmount}();
+
+        // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
+        // after the token swap, the user will receive the token
+        weth.approve(address(uniswapV3Router), EthAmount);
 
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i].asset != address(0)) {
-                _buyToken(assets[i].asset, amounts[i]);
+                _buyToken(user, assets[i].asset, amounts[i]);
             }
         }
     }
-    
-    function _buyToken(address token, uint256 amountInETH) private {
+
+    function _buyToken(
+        address recipient,
+        address token,
+        uint256 amountInETH
+    ) private {
         uint256 deadline = block.timestamp + 15;
-        IUniswapV3Router(uniswapV3Router).exactInputSingle{value: amountInETH}(
-            address(0),
+        uniswapV3Router.exactInputSingle{value: amountInETH}(
+            address(weth),
             token,
             fee,
-            msg.sender,
+            recipient,
             deadline,
             amountInETH,
             0,

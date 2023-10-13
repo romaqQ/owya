@@ -26,7 +26,7 @@ async function getContractInstance(
     console.log(`Deploying new ${contractName} instance...`);
     const contractInstance = await contractFactory.deploy(...args);
     await contractInstance.waitForDeployment();
-    console.log(`${contractName} deployed at ${contractInstance.address}`);
+    console.log(`${contractName} deployed at ${contractInstance.target}`);
     return contractInstance.connect(signer);
   }
 }

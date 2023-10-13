@@ -88,7 +88,7 @@ async function main() {
     kernelAddress,
     executorDelegate.interface,
     "delegateExecute",
-    [dcaAddress, amounts],
+    [dcaAddress, userSubscriptionAmount, amounts],
     deployer
   );
   // console.log(builder);

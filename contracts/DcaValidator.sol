@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.9;
 
 import "solady/utils/ECDSA.sol";
 import "kernel/interfaces/IValidator.sol";
@@ -23,10 +23,10 @@ contract DcaValidator is IKernelValidator {
     }
 
     function enable(bytes calldata _data) external payable override {
-      address _provider = address(bytes20(_data[0:20]));
-      require(_provider != address(0));
-      thirdPartyStorage[msg.sender].provider = _provider;
-      emit ProviderAdded(msg.sender, _provider);
+        address _provider = address(bytes20(_data[0:20]));
+        require(_provider != address(0));
+        thirdPartyStorage[msg.sender].provider = _provider;
+        emit ProviderAdded(msg.sender, _provider);
     }
 
     function disable(bytes calldata) external payable override {
@@ -39,13 +39,23 @@ contract DcaValidator is IKernelValidator {
         return executor[msg.sender];
     }
 
-    function validateUserOp(UserOperation calldata _userOp, bytes32 _userOpHash, uint256)
-        external
-        payable
-        override
-        returns (ValidationData validationData)
-    {   
-        
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner[msg.sender],
+            "Only owner can call this function"
+        );
+        _;
+    }
+
+    function setExecutor(address _executor) external onlyOwner {
+        executor[msg.sender] = _executor;
+    }
+
+    function validateUserOp(
+        UserOperation calldata _userOp,
+        bytes32 _userOpHash,
+        uint256
+    ) external payable override returns (ValidationData validationData) {
         // the function signature of the function being called by DelegateHandler
         // "executeDCA(address,uint256[])" is represented by the first 4 bytes of the calldata
         // calldataload(0x4) means that we are reading from the 4th byte of the calldata
@@ -55,9 +65,12 @@ contract DcaValidator is IKernelValidator {
         bytes memory data = _userOp.callData;
         address dcaContract;
         assembly {
-            dcaContract := and(mload(add(data, 0x24)), 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+            dcaContract := and(
+                mload(add(data, 0x24)),
+                0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+            )
         }
-        
+
         if (dcaContract != executor[msg.sender]) {
             return ValidationData.wrap(1); //Validation failed
         }
@@ -75,7 +88,10 @@ contract DcaValidator is IKernelValidator {
         return ValidationData.wrap(1); //Validation failed
     }
 
-    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
+    function validateSignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) public view override returns (ValidationData) {
         address signer = ECDSA.recover(hash, signature);
         if (thirdPartyStorage[msg.sender].provider == signer) {
             return ValidationData.wrap(0);
@@ -88,7 +104,10 @@ contract DcaValidator is IKernelValidator {
         return ValidationData.wrap(1); //Validation failed
     }
 
-    function validCaller(address _caller, bytes calldata) external view override returns (bool) {
+    function validCaller(
+        address _caller,
+        bytes calldata
+    ) external view override returns (bool) {
         return (thirdPartyStorage[msg.sender].provider == _caller);
     }
 }

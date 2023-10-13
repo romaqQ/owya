@@ -2,30 +2,7 @@ const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
 const KernelAccountAbi = require("../abi/KernelAccountAbi");
-
-async function getContractInstance(
-  contractName,
-  contractAddress,
-  signer,
-  ...args
-) {
-  // check what network hardhat is using
-  const network = await ethers.provider.getNetwork();
-  const deploy = network.name === "hardhat";
-  const contractFactory = await ethers.getContractFactory(contractName);
-  if (contractAddress && !deploy) {
-    console.log(
-      `Using existing ${contractName} instance at ${contractAddress}`
-    );
-    return await contractFactory.attach(contractAddress).connect(signer);
-  } else {
-    console.log(`Deploying new ${contractName} instance...`);
-    const contractInstance = await contractFactory.deploy(...args);
-    await contractInstance.waitForDeployment();
-    console.log(`${contractName} deployed at ${contractInstance.address}`);
-    return contractInstance.connect(signer);
-  }
-}
+const { getContractInstance } = require("../utils/utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
@@ -48,10 +25,11 @@ async function main() {
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
 
   const dca = await getContractInstance(
-    "DCA",
+    "DCAv1",
     process.env.DCA_CONTRACT_ADDRESS,
     deployer,
     UNISWAP_V3_ROUTER,
+    process.env.WETH_ADDRESS_GOERLI,
     userManagerAddress
   );
 
@@ -137,11 +115,11 @@ async function main() {
         data: userManager.interface.encodeFunctionData("subscribe", [
           [
             {
-              asset: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+              asset: process.env.WETH_ADDRESS_GOERLI,
               weight: 10000,
             },
           ],
-          ethers.parseEther("0.01"),
+          ethers.parseEther("0.001"),
           true,
         ]), // data
         operation: 0, // operation Operation.Call
@@ -193,14 +171,16 @@ async function main() {
   console.log("Retrieving Execution details selector");
   const executionDetails = await kernelContract.getExecution(selector);
 
-  // access the 3rd element of the Result array => executorHandler
   const executorHandler = executionDetails[2];
   console.log("ExecutorHandler:", executorHandler);
 
   const validatorHandler = executionDetails[3];
   console.log("ValidatorHandler:", validatorHandler);
 
-  if (executorHandler != executorDelegate.target) {
+  if (
+    executorHandler != executorDelegate.target ||
+    validatorHandler != dcaValidator.target
+  ) {
     console.log("ExecutorHandler address not set in Kernel");
     console.log("Enabling Plugin address in Kernel");
 

@@ -32,13 +32,20 @@ contract UserManager {
         _;
     }
 
-    function subscribe(Asset[] calldata assets, uint256 amount, bool checkGuidelines) public canSubscribe {
+    function subscribe(
+        Asset[] calldata assets,
+        uint256 amount,
+        bool checkGuidelines
+    ) public canSubscribe {
         uint256 totalWeight = 0;
         for (uint i = 0; i < assets.length; i++) {
             totalWeight += assets[i].weight;
         }
-        require(totalWeight == TOTAL_BASIS_POINTS, "Total weights must equal 10,000 basis points");
-        
+        require(
+            totalWeight == TOTAL_BASIS_POINTS,
+            "Total weights must equal 10,000 basis points"
+        );
+
         userSubscriptionAmount[msg.sender] = amount;
         userAllocations[msg.sender] = assets;
         requireGuidelines[msg.sender] = checkGuidelines;
@@ -52,8 +59,11 @@ contract UserManager {
         for (uint i = 0; i < newAssets.length; i++) {
             newTotalWeight += newAssets[i].weight;
         }
-        require(newTotalWeight == TOTAL_BASIS_POINTS, "Total newWeights must equal 10,000 basis points");
-        
+        require(
+            newTotalWeight == TOTAL_BASIS_POINTS,
+            "Total newWeights must equal 10,000 basis points"
+        );
+
         userAllocations[msg.sender] = newAssets;
     }
 
@@ -61,12 +71,14 @@ contract UserManager {
         require(isUserSubscribed[msg.sender], "User is not subscribed");
         userSubscriptionAmount[msg.sender] = amount;
     }
-    
+
     function toggleSubscription() public {
         isUserSubscribed[msg.sender] = !isUserSubscribed[msg.sender];
     }
 
-    function viewUserAllocations(address user) public view returns (Asset[] memory) {
+    function viewUserAllocations(
+        address user
+    ) public view returns (Asset[] memory) {
         return userAllocations[user];
     }
 }
