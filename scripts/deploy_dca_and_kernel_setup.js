@@ -136,7 +136,7 @@ async function main() {
               weight: 10000,
             },
           ],
-          ethers.parseEther("0.01"),
+          ethers.parseEther("0.001"),
           true,
         ]), // data
         operation: 0, // operation Operation.Call

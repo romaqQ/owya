@@ -4,13 +4,12 @@ const fs = require("fs");
 const { getContractInstance, buildUserOperation } = require("../utils/utils");
 
 async function main() {
-  const [deployer, kernelOwner] = await ethers.getSigners();
+  const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
 
   const kernel = await userop.Presets.Builder.Kernel.init(
     kernelOwner,
     process.env.GOERLI_RPC_URL
   );
-
   const client = await userop.Client.init(process.env.GOERLI_RPC_URL);
 
   const kernelAddress = kernel.getSender();
@@ -27,8 +26,8 @@ async function main() {
   const isSubscribedKernel = await userManager.isUserSubscribed(kernelAddress);
 
   // Query the User subscription Amount
-  const userSubscriptionAmount = await userManager.userSubscriptionAmount(
-    kernelAddress
+  const userSubscriptionAmount = BigInt(
+    await userManager.userSubscriptionAmount(kernelAddress)
   );
   console.log(
     "User subscription: %s Ether",
@@ -36,17 +35,19 @@ async function main() {
   );
 
   // get function selection from executorDelegate contract
+  // get interface from executorDelegate contract
+  const executorDelegate = await ethers.getContractFactory("ExecutorDelegate");
   const selector =
     executorDelegate.interface.getFunction("delegateExecute").selector;
   console.log("Function selector:", selector);
 
   // Send Ether to kernel contract
-  const tx = await kernelOwner.sendTransaction({
-    to: kernelAddress,
-    value: ethers.parseEther("0.02"),
-  });
-  await tx.wait();
-  console.log("Ether sent to kernel contract");
+  // const tx = await kernelOwner.sendTransaction({
+  //   to: kernelAddress,
+  //   value: ethers.parseEther("0.02"),
+  // });
+  // await tx.wait();
+  // console.log("Ether sent to kernel contract");
 
   console.log("Kernel is subscribed to UserManager:", isSubscribedKernel);
   if (!isSubscribedKernel) {
@@ -72,27 +73,29 @@ async function main() {
   }
 
   // multiply the weights times the userSubscriptionAmount to get the amount of each asset to swap
+  const bps = BigInt(10000);
   let amounts = [];
   for (let i = 0; i < weights.length; i++) {
-    const amount = ethers.BigNumber.from(weights[i])
-      .mul(userSubscriptionAmount)
-      .div(10000);
+    const amount = (BigInt(weights[i]) * userSubscriptionAmount) / bps;
     amounts.push(amount);
   }
+
+  // Executor DCA contract address
+  const dcaAddress = process.env.DCA_CONTRACT_ADDRESS;
 
   // create the swap data
   const builder = await buildUserOperation(
     kernelAddress,
     executorDelegate.interface,
     "delegateExecute",
-    [assets, amounts],
+    [dcaAddress, amounts],
     deployer
   );
-  console.log(builder);
-  // const res = await client.sendUserOperation(builder);
-  // console.log(`UserOpHash: ${res.userOpHash}`);
-  // const ev = await res.wait();
-  // console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
+  // console.log(builder);
+  const res = await client.sendUserOperation(builder);
+  console.log(`UserOpHash: ${res.userOpHash}`);
+  const ev = await res.wait();
+  console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
 
   // check the balance of the kernel contract for the swapped asset
   const asset = assets[0];

@@ -5,6 +5,7 @@ const {
   Constants,
   BundlerJsonRpcProvider,
 } = require("userop");
+const EntryPointAbi = require("../abi/EntryPointAbi");
 
 async function getContractInstance(
   contractName,
@@ -32,7 +33,7 @@ async function getContractInstance(
 
 async function buildUserOperation(
   kernelAddress,
-  executorAbi,
+  executorInterface,
   function_name,
   args,
   signer
@@ -43,32 +44,36 @@ async function buildUserOperation(
     provider.getBlock("latest"),
   ]);
 
-  const entryPoint = EntryPoint__factory.connect(
+  const entryPointContract = new ethers.Contract(
     process.env.ENTRY_POINT,
+    EntryPointAbi,
     provider
   );
-  const nonce = await entryPoint.getNonce(accountAddress, 0);
-  const tip = BigNumber.from(fee);
-  const buffer = tip.div(100).mul(13);
-  const maxPriorityFeePerGas = tip.add(buffer);
+  const nonce = await entryPointContract.getNonce(kernelAddress, 0);
+  const tip = BigInt(fee);
+  const buffer = tip * BigInt(100) * BigInt(13);
+  const maxPriorityFeePerGas = tip + buffer;
   const maxFeePerGas = block.baseFeePerGas
     ? block.baseFeePerGas.mul(2).add(maxPriorityFeePerGas)
     : maxPriorityFeePerGas;
-  // log all params
-  console.log("buildUserOp - kernelAddress:", kernelAddress);
-  console.log("buildUserOp - executorAbi:", executorAbi);
-  console.log("buildUserOp - function_name:", function_name);
-  console.log("buildUserOp - args:", args);
-  console.log("buildUserOp - maxFeePerGas:", maxFeePerGas);
-  console.log("buildUserOp - nonce:", nonce);
-  console.log("buildUserOp - maxPriorityFeePerGas:", maxPriorityFeePerGas);
-  console.log("buildUserOp - signer:", signer.address);
+  // console.log("buildUserOp - kernelAddress:", kernelAddress);
+  // console.log("buildUserOp - executorAbi:", executorInterface);
+  // console.log("buildUserOp - function_name:", function_name);
+  // console.log("buildUserOp - args:", args);
+  // console.log("buildUserOp - maxFeePerGas:", maxFeePerGas);
+  // console.log("buildUserOp - nonce:", nonce);
+  // console.log("buildUserOp - maxPriorityFeePerGas:", maxPriorityFeePerGas);
+  // console.log("buildUserOp - signer:", signer.address);
+  // console.log(
+  //   ethers.hexlify(Constants.Kernel.Modes.Plugin),
+  //   Constants.Kernel.Modes.Plugin,
+  //   ethers.stripZerosLeft(Constants.Kernel.Modes.Plugin)
+  // );
 
+  const calldata = executorInterface.encodeFunctionData(function_name, args);
   const op = await _buildUserOperation(
     kernelAddress,
-    executorAbi,
-    function_name,
-    args,
+    calldata,
     maxFeePerGas,
     nonce,
     maxPriorityFeePerGas,
@@ -79,9 +84,7 @@ async function buildUserOperation(
 
 async function _buildUserOperation(
   kernelAddress,
-  executorAbi,
-  function_name,
-  args,
+  callData,
   maxFeePerGas,
   nonce,
   maxPriorityFeePerGas,
@@ -91,9 +94,7 @@ async function _buildUserOperation(
   const builder = base
     .useDefaults({
       sender: kernelAddress, //client account
-      callData: ethers
-        .Interface(executorAbi)
-        .encodeFunctionData(function_name, args),
+      callData: callData,
       maxFeePerGas: maxFeePerGas,
       nonce: nonce,
       maxPriorityFeePerGas: maxPriorityFeePerGas,
@@ -101,8 +102,8 @@ async function _buildUserOperation(
     })
     .useMiddleware(Presets.Middleware.EOASignature(signer))
     .useMiddleware(async (ctx) => {
-      ctx.op.signature = hexConcat([
-        Constants.Kernel.Modes.Plugin,
+      ctx.op.signature = ethers.concat([
+        ethers.stripZerosLeft(Constants.Kernel.Modes.Plugin),
         ctx.op.signature,
       ]);
     });
