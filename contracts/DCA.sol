@@ -51,6 +51,13 @@ contract DCAv1 {
         uint256 amountInETH
     );
 
+    event TestExecuted(
+        address indexed user,
+        uint256[] amountsInETH,
+        uint256 value,
+        address[] assets
+    );
+
     constructor(address _uniswapV3Router, address _weth, address _userManager) {
         uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
         weth = IWETH(_weth);
@@ -98,6 +105,32 @@ contract DCAv1 {
         return true;
     }
 
+    function testExecute(
+        address user,
+        uint256[] calldata amounts
+    ) external payable {
+        // Emit Event
+
+        (address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocations(user);
+
+        emit TestExecuted(user, amounts, msg.value, assets);
+
+        require(
+            assets.length == amounts.length,
+            "Amounts length must match assets length"
+        );
+        uint256 EthAmount = msg.value;
+
+        // Convert the received ETH to WETH first
+        // the owner is now this contract (DCAv1) as an intermediary step
+        // weth.deposit{value: EthAmount}();
+
+        // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
+        // after the token swap, the user will receive the token
+        // weth.approve(address(uniswapV3Router), EthAmount);
+    }
+
     function execute(
         address user,
         uint256[] calldata amounts
@@ -131,7 +164,7 @@ contract DCAv1 {
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i] != address(0)) {
                 emit TokenBought(user, assets[i], amounts[i]);
-                // _buyToken(user, assets[i], amounts[i]);
+                //_buyToken(user, assets[i], amounts[i]);
             }
         }
     }

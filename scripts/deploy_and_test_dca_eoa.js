@@ -41,7 +41,7 @@ async function main() {
   // send some ether to the dcaTrigger contract
   const tx = await deployer.sendTransaction({
     to: dcaTrigger.target,
-    value: ethers.parseEther("0.001"),
+    value: ethers.parseEther("0.01"),
   });
   await tx.wait();
   console.log("Ether sent to dcaTrigger contract");
@@ -119,13 +119,26 @@ async function main() {
   const triggerTx = await dcaTrigger.triggerDelegate(
     dca.target,
     userSubscriptionAmount,
-    assets
+    amounts
   );
   await triggerTx.wait();
   console.log("DCA Triggered");
-  // catch the emitted events
-  const events = await dcaTrigger.queryFilter(dcaTrigger.filters.Triggered());
-  console.log("Triggered events:", events);
+  console.log(assets);
+  console.log(userSubscriptionAmount.toString());
+
+  // Log all dcaTrigger.TestExecute events
+  const filter = dca.filters.TokenBought();
+
+  // fetch current block number
+  const blockNumber = await dca.provider.getBlockNumber();
+  const fromBlock = blockNumber;
+
+  const toBlock = "latest";
+  const logs = await dca.queryFilter(filter, fromBlock, toBlock);
+  // get the values of the event
+  const event = logs[0];
+  const values = event.args;
+  console.log("Event values:", values);
 
   // withdraw funds from dcaTrigger account
   const withdrawTx = await dcaTrigger.withdraw();
