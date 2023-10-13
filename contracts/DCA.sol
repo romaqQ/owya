@@ -45,6 +45,12 @@ contract DCAv1 {
     address owner;
     IWETH public weth;
 
+    event TokenBought(
+        address indexed user,
+        address indexed token,
+        uint256 amountInETH
+    );
+
     constructor(address _uniswapV3Router, address _weth, address _userManager) {
         uniswapV3Router = IUniswapV3Router(_uniswapV3Router);
         weth = IWETH(_weth);
@@ -78,12 +84,11 @@ contract DCAv1 {
             totalAmount += amounts[i];
         }
 
-        UserManager.Asset[] memory assets = userManager.viewUserAllocations(
-            user
-        );
+        (address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocations(user);
 
         for (uint i = 0; i < assets.length; i++) {
-            uint256 targetWeight = assets[i].weight;
+            uint256 targetWeight = weights[i];
             uint256 actualWeight = amounts[i] / totalAmount;
             //if (actualWeight != targetWeight) {
             //    return false;
@@ -107,9 +112,8 @@ contract DCAv1 {
         //     );
         // }
 
-        UserManager.Asset[] memory assets = userManager.viewUserAllocations(
-            user
-        );
+        (address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocations(user);
         require(
             assets.length == amounts.length,
             "Amounts length must match assets length"
@@ -125,8 +129,9 @@ contract DCAv1 {
         weth.approve(address(uniswapV3Router), EthAmount);
 
         for (uint i = 0; i < assets.length; i++) {
-            if (assets[i].asset != address(0)) {
-                _buyToken(user, assets[i].asset, amounts[i]);
+            if (assets[i] != address(0)) {
+                emit TokenBought(user, assets[i], amounts[i]);
+                // _buyToken(user, assets[i], amounts[i]);
             }
         }
     }

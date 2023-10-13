@@ -5,15 +5,11 @@ contract UserManager {
     address public owner;
     bool public subscriptionsEnabled;
 
-    struct Asset {
-        address asset;
-        uint256 weight;
-    }
-
     mapping(address => bool) public isUserSubscribed;
     mapping(address => uint256) public userLastExecution;
     mapping(address => uint256) public userSubscriptionAmount;
-    mapping(address => Asset[]) public userAllocations;
+    mapping(address => address[]) public userAssets;
+    mapping(address => uint256[]) public userAssetWeights;
     mapping(address => bool) public requireGuidelines;
     uint256 constant TOTAL_BASIS_POINTS = 10000;
 
@@ -33,13 +29,18 @@ contract UserManager {
     }
 
     function subscribe(
-        Asset[] calldata assets,
+        address[] calldata assetAddress,
+        uint256[] calldata assetWeights,
         uint256 amount,
         bool checkGuidelines
     ) public canSubscribe {
+        require(
+            assetAddress.length == assetWeights.length,
+            "Length of asset and weight arrays must match"
+        );
         uint256 totalWeight = 0;
-        for (uint i = 0; i < assets.length; i++) {
-            totalWeight += assets[i].weight;
+        for (uint i = 0; i < assetWeights.length; i++) {
+            totalWeight += assetWeights[i];
         }
         require(
             totalWeight == TOTAL_BASIS_POINTS,
@@ -47,24 +48,40 @@ contract UserManager {
         );
 
         userSubscriptionAmount[msg.sender] = amount;
-        userAllocations[msg.sender] = assets;
+        delete userAssets[msg.sender]; // clear current allocation
+        delete userAssetWeights[msg.sender]; // clear current allocation
+        for (uint i = 0; i < assetAddress.length; i++) {
+            userAssets[msg.sender].push(assetAddress[i]);
+            userAssetWeights[msg.sender].push(assetWeights[i]);
+        }
         requireGuidelines[msg.sender] = checkGuidelines;
         isUserSubscribed[msg.sender] = true;
     }
 
-    function changeUserAllocation(Asset[] memory newAssets) public {
+    function changeUserAllocation(
+        address[] calldata assetAddress,
+        uint256[] calldata assetWeights
+    ) public {
+        require(
+            assetAddress.length == assetWeights.length,
+            "Length of asset and weight arrays must match"
+        );
         require(isUserSubscribed[msg.sender], "User is not subscribed");
 
         uint256 newTotalWeight = 0;
-        for (uint i = 0; i < newAssets.length; i++) {
-            newTotalWeight += newAssets[i].weight;
+        for (uint i = 0; i < assetWeights.length; i++) {
+            newTotalWeight += assetWeights[i];
         }
         require(
             newTotalWeight == TOTAL_BASIS_POINTS,
             "Total newWeights must equal 10,000 basis points"
         );
-
-        userAllocations[msg.sender] = newAssets;
+        delete userAssets[msg.sender]; // clear current allocation
+        delete userAssetWeights[msg.sender]; // clear current allocation
+        for (uint i = 0; i < assetAddress.length; i++) {
+            userAssets[msg.sender].push(assetAddress[i]);
+            userAssetWeights[msg.sender].push(assetWeights[i]);
+        }
     }
 
     function changeUserSubscriptionAmount(uint256 amount) public {
@@ -78,7 +95,7 @@ contract UserManager {
 
     function viewUserAllocations(
         address user
-    ) public view returns (Asset[] memory) {
-        return userAllocations[user];
+    ) public view returns (address[] memory, uint256[] memory) {
+        return (userAssets[user], userAssetWeights[user]);
     }
 }
