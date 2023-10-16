@@ -20,22 +20,22 @@ async function main() {
   console.log("Deployer balance:", deployerBalance.toString());
 
   // Check if deployer is subscribed to userManager
-  const isSubscribed1 = await userManager.isUserSubscribed(deployer.address);
-  if (isSubscribed1) {
-    console.log(
-      "Deployer is already subscribed to UserManager:",
-      isSubscribed1
-    );
-  } else {
-    const subscribeTx = await userManager.subscribe(
-      [{ asset: process.env.WETH_ADDRESS_GOERLI, weight: 10000 }],
-      ethers.parseEther("0.001"),
-      true
-    );
-    await subscribeTx.wait();
-    const isSubscribed2 = await userManager.isUserSubscribed(deployer.address);
-    console.log("Deployer subscribed to UserManager:", isSubscribed2);
-  }
+  // const isSubscribed1 = await userManager.isUserSubscribed(deployer.address);
+  // if (isSubscribed1) {
+  //   console.log(
+  //     "Deployer is already subscribed to UserManager:",
+  //     isSubscribed1
+  //   );
+  // } else {
+  //   const subscribeTx = await userManager.subscribe(
+  //     [{ asset: process.env.WETH_ADDRESS_GOERLI, weight: 10000 }],
+  //     ethers.parseEther("0.001"),
+  //     true
+  //   );
+  //   await subscribeTx.wait();
+  //   const isSubscribed2 = await userManager.isUserSubscribed(deployer.address);
+  //   console.log("Deployer subscribed to UserManager:", isSubscribed2);
+  // }
 
   // Deploy DCA contract
   UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
@@ -130,12 +130,8 @@ async function main() {
         to: userManagerAddress, // to
         value: 0, // value
         data: userManager.interface.encodeFunctionData("subscribe", [
-          [
-            {
-              asset: process.env.WETH_ADDRESS_GOERLI,
-              weight: 10000,
-            },
-          ],
+          [process.env.UNI_ADDRESS_GOERLI, process.env.UNI_ADDRESS_GOERLI], // assets
+          [7500, 2500], // weights
           ethers.parseEther("0.001"),
           true,
         ]), // data

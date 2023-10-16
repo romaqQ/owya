@@ -35,15 +35,13 @@ module.exports = {
       viaIR: true,
     },
   },
-  // defaultNetwork: "goerli",
-  // alias: {
-  //   "account-abstraction": "lib/account-abstraction/contracts/",
-  //   "openzeppelin-contracts": "lib/openzeppelin-contracts/",
-  //   "@openzeppelin": "lib/openzeppelin-contracts",
-  //   solady: "lib/solady/src/",
-  //   kernel: "lib/kernel/src/",
-  // },
   networks: {
+    hardhat: {
+      forking: {
+        url: process.env.ETHEREUM_MAINNET_RPC_URL,
+      },
+      chainId: 1,
+    },
     mumbai: {
       url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_ID}`,
       accounts: getAccounts(),

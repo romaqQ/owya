@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
+import "hardhat/console.sol";
+
 contract UserManager {
     address public owner;
     bool public subscriptionsEnabled;
@@ -42,6 +44,7 @@ contract UserManager {
         for (uint i = 0; i < assetWeights.length; i++) {
             totalWeight += assetWeights[i];
         }
+        console.log("TotalWeight:", totalWeight);
         require(
             totalWeight == TOTAL_BASIS_POINTS,
             "Total weights must equal 10,000 basis points"

@@ -57,14 +57,14 @@ async function main() {
     // call the subscribe function on the userManager contract from the dcaTrigger contract
     console.log("Subscribing DcaTrigger to UserManager...");
     const subscribeTx = await dcaTrigger.subscribe(
-      [process.env.WETH_ADDRESS_GOERLI],
-      [10000],
+      [process.env.UNI_ADDRESS_GOERLI, process.env.UNI_ADDRESS_GOERLI],
+      [7500, 2500],
       ethers.parseEther("0.001"),
-      true
+      false
     );
     await subscribeTx.wait();
     const isSubscribed2 = await userManager.isUserSubscribed(dcaTrigger.target);
-    console.log("Deployer subscribed to UserManager:", isSubscribed2);
+    console.log("DCA Trigger subscribed to UserManager:", isSubscribed2);
   }
 
   // Deploy DCA contract
@@ -93,7 +93,12 @@ async function main() {
   const [userAssets, userWeights] = await userManager.viewUserAllocations(
     dcaTrigger.target
   );
-  console.log("User allocation:", userAssets, userWeights);
+  console.log(
+    "User %s allocation: %s %s",
+    dcaTrigger.target,
+    userAssets,
+    userWeights
+  );
 
   // create asset and weight arrays
   let assets = [];
@@ -127,18 +132,17 @@ async function main() {
   console.log(userSubscriptionAmount.toString());
 
   // Log all dcaTrigger.TestExecute events
-  const filter = dca.filters.TokenBought();
 
-  // fetch current block number
-  const blockNumber = await dca.provider.getBlockNumber();
-  const fromBlock = blockNumber;
+  // // fetch current block number
+  // // const blockNumber = await dca.provider.getBlockNumber();
+  // const fromBlock = 0;
 
-  const toBlock = "latest";
-  const logs = await dca.queryFilter(filter, fromBlock, toBlock);
-  // get the values of the event
-  const event = logs[0];
-  const values = event.args;
-  console.log("Event values:", values);
+  // const toBlock = "latest";
+  // const logs = await dca.queryFilter(filter, fromBlock, toBlock);
+  // // get the values of the event
+  // const event = logs[0];
+  // const values = event.args;
+  // console.log("Event values:", values);
 
   // withdraw funds from dcaTrigger account
   const withdrawTx = await dcaTrigger.withdraw();

@@ -7,15 +7,6 @@ contract ExecutorDelegate {
         uint256 totalAmountInEth,
         uint256[] calldata amountsInETH
     ) external payable {
-        // (bool success, ) = dcaContract.call{value: totalAmountInEth}(
-        //     abi.encodeWithSignature(
-        //         "testExecute(address,uint256[])",
-        //         user,
-        //         amountsInETH
-        //     )
-        // );
-        // require(success, "DCA failed");
-
         (bool success, ) = dcaContract.call{value: totalAmountInEth}(
             abi.encodeWithSignature(
                 "execute(address,uint256[])",

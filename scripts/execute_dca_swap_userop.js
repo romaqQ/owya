@@ -58,15 +58,22 @@ async function main() {
   }
 
   // View user allocation
-  const userAllocation = await userManager.viewUserAllocations(kernelAddress);
-  console.log("User allocation:");
+  const [userAssets, userWeights] = await userManager.viewUserAllocations(
+    kernelAddress
+  );
+  console.log(
+    "User %s allocation: %s %s",
+    kernelAddress,
+    userAssets,
+    userWeights
+  );
   // create asset and weight arrays
   let assets = [];
   let weights = [];
 
-  for (let i = 0; i < userAllocation.length; i++) {
-    const asset = userAllocation[i].asset;
-    const weight = userAllocation[i].weight;
+  for (let i = 0; i < userAssets.length; i++) {
+    const asset = userAssets[i];
+    const weight = userWeights[i];
     console.log(`Asset: ${asset}, Weight: ${weight}`);
     assets.push(asset);
     weights.push(weight);
@@ -82,7 +89,7 @@ async function main() {
 
   // Executor DCA contract address
   const dcaAddress = process.env.DCA_CONTRACT_ADDRESS;
-
+  console.log("Amounts", amounts);
   // create the swap data
   const builder = await buildUserOperation(
     kernelAddress,

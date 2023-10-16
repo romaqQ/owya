@@ -28,9 +28,13 @@ curl -L https://foundry.paradigm.xyz | bash
 
 ### Deployment and Hardhat Commands
 
+#### Run Mainnet Fork
+Set `ETHEREUM_MAINNET_RPC_URL` in the `.env` file.
+
+
+#### Run deploy scripts
 
 ```shell
-
 npx hardhat compile
 npx hardhat run scripts/deploy.js
 ```
