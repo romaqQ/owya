@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
 const KernelAccountAbi = require("../abi/KernelAccountAbi");
-const { getContractInstance } = require("../utils/utils");
+const { getContractInstance, getTokenAddress } = require("../utils/utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
@@ -23,13 +23,13 @@ async function main() {
   // Deploy DCA contract
   UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-
+  const wethAddress = getTokenAddress("weth");
   const dca = await getContractInstance(
     "DCAv1",
     process.env.DCA_CONTRACT_ADDRESS,
     deployer,
     UNISWAP_V3_ROUTER,
-    process.env.WETH_ADDRESS_GOERLI,
+    wethAddress,
     userManagerAddress
   );
 
@@ -100,7 +100,7 @@ async function main() {
 
   // Check if kernel is subscribed to UserManager
   const isSubscribedKernel = await userManager.isUserSubscribed(kernelAddress);
-
+  const uniAddress = getTokenAddress("uni");
   if (isSubscribedKernel) {
     console.log(
       "Kernel is already subscribed to UserManager:",
@@ -113,12 +113,8 @@ async function main() {
         to: userManagerAddress, // to
         value: 0, // value
         data: userManager.interface.encodeFunctionData("subscribe", [
-          [
-            {
-              asset: process.env.WETH_ADDRESS_GOERLI,
-              weight: 10000,
-            },
-          ],
+          [uniAddress, uniAddress],
+          [7500, 2500],
           ethers.parseEther("0.001"),
           true,
         ]), // data
@@ -135,13 +131,10 @@ async function main() {
   }
 
   // View user allocation
-  const userAllocation = await userManager.viewUserAllocations(kernelAddress);
-  console.log("User allocation:");
-  for (let i = 0; i < userAllocation.length; i++) {
-    const asset = userAllocation[i].asset;
-    const weight = userAllocation[i].weight;
-    console.log(`Asset: ${asset}, Weight: ${weight}`);
-  }
+  const [userAssets, userWeights] = await userManager.viewUserAllocations(
+    kernelAddress
+  );
+  console.log("User %s allocation: %s", userAssets, userWeights);
 
   // View user subscription
   const userSubscriptionAmount = await userManager.userSubscriptionAmount(

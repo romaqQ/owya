@@ -1,7 +1,7 @@
 require("@nomicfoundation/hardhat-toolbox");
 require("@nomicfoundation/hardhat-foundry");
 require("@nomicfoundation/hardhat-ethers");
-
+require("@nomicfoundation/hardhat-verify");
 require("dotenv").config();
 
 function getAccounts() {
@@ -41,6 +41,12 @@ module.exports = {
         url: process.env.ETHEREUM_MAINNET_RPC_URL,
       },
       chainId: 1,
+      weth: process.env.WETH_ADDRESS_MAINNET
+        ? process.env.WETH_ADDRESS_MAINNET
+        : "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      uni: process.env.UNI_ADDRESS_GOERLI
+        ? process.env.UNI_ADDRESS_GOERLI
+        : "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
     },
     mumbai: {
       url: `https://polygon-mumbai.infura.io/v3/${process.env.INFURA_ID}`,
@@ -75,10 +81,28 @@ module.exports = {
       accounts: getAccounts(),
     },
   },
+  tokenAddresses: {
+    hardhat: {
+      weth: process.env.WETH_ADDRESS_MAINNET
+        ? process.env.WETH_ADDRESS_MAINNET
+        : "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+      uni: process.env.UNI_ADDRESS_GOERLI
+        ? process.env.UNI_ADDRESS_GOERLI
+        : "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    },
+    goerli: {
+      weth: process.env.WETH_ADDRESS_GOERLI
+        ? process.env.WETH_ADDRESS_GOERLI
+        : "0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6",
+      uni: process.env.UNI_ADDRESS_GOERLI
+        ? process.env.UNI_ADDRESS_GOERLI
+        : "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+    },
+  },
   etherscan: {
     apiKey: {
-      goerli: process.env.GOERLI_ETHERSCAN_API_KEY
-        ? process.env.GOERLI_ETHERSCAN_API_KEY
+      goerli: process.env.ETHERSCAN_API_KEY
+        ? process.env.ETHERSCAN_API_KEY
         : "",
     },
   },

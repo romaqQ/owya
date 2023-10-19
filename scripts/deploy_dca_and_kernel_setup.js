@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { getContractInstance } = require("../utils/utils");
+const { getContractInstance, getTokenAddress } = require("../utils/utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
@@ -19,34 +19,16 @@ async function main() {
   const deployerBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Deployer balance:", deployerBalance.toString());
 
-  // Check if deployer is subscribed to userManager
-  // const isSubscribed1 = await userManager.isUserSubscribed(deployer.address);
-  // if (isSubscribed1) {
-  //   console.log(
-  //     "Deployer is already subscribed to UserManager:",
-  //     isSubscribed1
-  //   );
-  // } else {
-  //   const subscribeTx = await userManager.subscribe(
-  //     [{ asset: process.env.WETH_ADDRESS_GOERLI, weight: 10000 }],
-  //     ethers.parseEther("0.001"),
-  //     true
-  //   );
-  //   await subscribeTx.wait();
-  //   const isSubscribed2 = await userManager.isUserSubscribed(deployer.address);
-  //   console.log("Deployer subscribed to UserManager:", isSubscribed2);
-  // }
-
   // Deploy DCA contract
   UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-
+  const wethAddress = getTokenAddress("weth");
   const dca = await getContractInstance(
     "DCAv1",
     process.env.DCA_CONTRACT_ADDRESS,
     deployer,
     UNISWAP_V3_ROUTER,
-    process.env.WETH_ADDRESS_GOERLI,
+    wethAddress,
     userManagerAddress
   );
 
@@ -125,12 +107,13 @@ async function main() {
     );
   } else {
     // From kernel contract execute subscribe function on UserManager contract
+    const uniAddress = getTokenAddress("uni");
     const kernelSubTx = await client.sendUserOperation(
       kernel.execute({
         to: userManagerAddress, // to
         value: 0, // value
         data: userManager.interface.encodeFunctionData("subscribe", [
-          [process.env.UNI_ADDRESS_GOERLI, process.env.UNI_ADDRESS_GOERLI], // assets
+          [uniAddress, uniAddress], // assets
           [7500, 2500], // weights
           ethers.parseEther("0.001"),
           true,

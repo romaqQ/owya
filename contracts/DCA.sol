@@ -80,31 +80,32 @@ contract DCAv1 {
         return true;
     }
 
-    // function testExecute(
-    //     address user,
-    //     uint256[] calldata amounts
-    // ) external payable {
-    //     // Emit Event
+    function testExecute(
+        address user,
+        uint256[] calldata amounts
+    ) external payable {
+        // Emit Event
+        console.log(user, amounts[0], amounts[0], msg.value);
 
-    //     (address[] memory assets, uint256[] memory weights) = userManager
-    //         .viewUserAllocations(user);
+        // (address[] memory assets, uint256[] memory weights) = userManager
+        //     .viewUserAllocations(user);
 
-    //     emit TestExecuted(user, amounts, msg.value, assets);
+        // emit TestExecuted(user, amounts, msg.value, assets);
 
-    //     require(
-    //         assets.length == amounts.length,
-    //         "Amounts length must match assets length"
-    //     );
-    //     uint256 EthAmount = msg.value;
+        // require(
+        //     assets.length == amounts.length,
+        //     "Amounts length must match assets length"
+        // );
+        // uint256 EthAmount = msg.value;
 
-    //     // Convert the received ETH to WETH first
-    //     // the owner is now this contract (DCAv1) as an intermediary step
-    //     // weth.deposit{value: EthAmount}();
+        // // Convert the received ETH to WETH first
+        // // the owner is now this contract (DCAv1) as an intermediary step
+        // // weth.deposit{value: EthAmount}();
 
-    //     // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
-    //     // after the token swap, the user will receive the token
-    //     // weth.approve(address(uniswapV3Router), EthAmount);
-    // }
+        // // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
+        // // after the token swap, the user will receive the token
+        // weth.approve(address(uniswapV3Router), EthAmount);
+    }
 
     function execute(
         address user,

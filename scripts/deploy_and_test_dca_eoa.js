@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { getContractInstance } = require("../utils/utils");
+const { getContractInstance, getTokenAddress } = require("../utils/utils");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
@@ -56,8 +56,10 @@ async function main() {
   } else {
     // call the subscribe function on the userManager contract from the dcaTrigger contract
     console.log("Subscribing DcaTrigger to UserManager...");
+    const uniAddress = getTokenAddress("uni");
+    console.log("UNI address:", uniAddress);
     const subscribeTx = await dcaTrigger.subscribe(
-      [process.env.UNI_ADDRESS_GOERLI, process.env.UNI_ADDRESS_GOERLI],
+      [uniAddress, uniAddress],
       [7500, 2500],
       ethers.parseEther("0.001"),
       false
@@ -70,13 +72,13 @@ async function main() {
   // Deploy DCA contract
   UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-
+  const wethAddress = getTokenAddress("weth");
   const dca = await getContractInstance(
     "DCAv1",
     process.env.DCA_CONTRACT_ADDRESS,
     deployer,
     UNISWAP_V3_ROUTER,
-    process.env.WETH_ADDRESS_GOERLI,
+    wethAddress,
     userManagerAddress
   );
 
@@ -130,19 +132,6 @@ async function main() {
   console.log("DCA Triggered");
   console.log(assets);
   console.log(userSubscriptionAmount.toString());
-
-  // Log all dcaTrigger.TestExecute events
-
-  // // fetch current block number
-  // // const blockNumber = await dca.provider.getBlockNumber();
-  // const fromBlock = 0;
-
-  // const toBlock = "latest";
-  // const logs = await dca.queryFilter(filter, fromBlock, toBlock);
-  // // get the values of the event
-  // const event = logs[0];
-  // const values = event.args;
-  // console.log("Event values:", values);
 
   // withdraw funds from dcaTrigger account
   const withdrawTx = await dcaTrigger.withdraw();

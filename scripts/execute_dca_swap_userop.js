@@ -103,14 +103,6 @@ async function main() {
   console.log(`UserOpHash: ${res.userOpHash}`);
   const ev = await res.wait();
   console.log(`Transaction hash: ${ev?.transactionHash ?? null}`);
-
-  // check the balance of the kernel contract for the swapped asset
-  const asset = assets[0];
-  const assetContract = await getContractInstance("IERC20", asset, deployer);
-  const balance = await assetContract.balanceOf(kernelAddress);
-  console.log(
-    `Kernel balance of ${asset}: ${ethers.utils.formatUnits(balance, 18)}`
-  );
 }
 
 main()

@@ -6,6 +6,16 @@ const {
   BundlerJsonRpcProvider,
 } = require("userop");
 const EntryPointAbi = require("../abi/EntryPointAbi");
+const hre = require("hardhat");
+
+function getTokenAddress(tokenName) {
+  const network = hre.network.name;
+  // create lowercase token name
+  const tokenNameLc = tokenName.toLowerCase();
+  return (
+    hre.config.tokenAddresses?.[network]?.[tokenNameLc] || "Address not found"
+  );
+}
 
 async function getContractInstance(
   contractName,
@@ -27,8 +37,32 @@ async function getContractInstance(
     const contractInstance = await contractFactory.deploy(...args);
     await contractInstance.waitForDeployment();
     console.log(`${contractName} deployed at ${contractInstance.target}`);
+    // wait for 20 seconds for contract to be deployed
+    console.log(
+      "Waiting for 20 seconds for contract to be deployed to continue with verification"
+    );
+    if (!deploy) {
+      await new Promise((r) => setTimeout(r, 20000));
+      // try verification if it fails wait for another 20 seconds before trying again
+      try {
+        await verifyContract(contractInstance.target, args);
+      } catch (error) {
+        console.log("Verification failed, trying again in 20 seconds...");
+        await new Promise((r) => setTimeout(r, 20000));
+        await verifyContract(contractInstance.target, args);
+      }
+    }
     return contractInstance.connect(signer);
   }
+}
+
+async function verifyContract(contractAddress, contractArgs) {
+  // verification
+  console.log("Verifying contract...", contractAddress);
+  await hre.run("verify:verify", {
+    address: contractAddress,
+    constructorArguments: contractArgs ? contractArgs : [],
+  });
 }
 
 async function buildUserOperation(
@@ -51,16 +85,20 @@ async function buildUserOperation(
   );
   const nonce = await entryPointContract.getNonce(kernelAddress, 0);
   const tip = BigInt(fee);
-  const buffer = tip * BigInt(100) * BigInt(13);
+  const buffer = (tip / BigInt(100)) * BigInt(13);
   const maxPriorityFeePerGas = tip + buffer;
   const maxFeePerGas = block.baseFeePerGas
-    ? block.baseFeePerGas.mul(2).add(maxPriorityFeePerGas)
+    ? BigInt(block.baseFeePerGas) * BigInt(2) + maxPriorityFeePerGas
     : maxPriorityFeePerGas;
   // console.log("buildUserOp - kernelAddress:", kernelAddress);
   // console.log("buildUserOp - executorAbi:", executorInterface);
   // console.log("buildUserOp - function_name:", function_name);
   // console.log("buildUserOp - args:", args);
   // console.log("buildUserOp - maxFeePerGas:", maxFeePerGas);
+  // console.log(
+  //   "buildUserOp - block.baseFeePerGas:",
+  //   BigInt(block.baseFeePerGas)
+  // );
   // console.log("buildUserOp - nonce:", nonce);
   // console.log("buildUserOp - maxPriorityFeePerGas:", maxPriorityFeePerGas);
   // console.log("buildUserOp - signer:", signer.address);
@@ -103,7 +141,7 @@ async function _buildUserOperation(
     .useMiddleware(Presets.Middleware.EOASignature(signer))
     .useMiddleware(async (ctx) => {
       ctx.op.signature = ethers.concat([
-        ethers.stripZerosLeft(Constants.Kernel.Modes.Plugin),
+        Constants.Kernel.Modes.Plugin,
         ctx.op.signature,
       ]);
     });
@@ -114,4 +152,5 @@ async function _buildUserOperation(
 module.exports = {
   getContractInstance,
   buildUserOperation,
+  getTokenAddress,
 };
