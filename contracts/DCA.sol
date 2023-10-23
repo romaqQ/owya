@@ -19,18 +19,17 @@ contract DCAv1 {
     address owner;
     IWETH public weth;
 
-    event TokenBought(
+    event LogMe(
         address indexed user,
-        address indexed token,
-        uint256 amountInETH
+        address wethAddress,
+        uint256 value
+        // address[] assets,
+        // bool userSubscribed,
+        // uint256 assetLength,
+        // uint256 amountLength
     );
 
-    event TestExecuted(
-        address indexed user,
-        uint256[] amountsInETH,
-        uint256 value,
-        address[] assets
-    );
+    event TokenBought(address indexed user, address token, uint256 amount);
 
     constructor(address _uniswapV3Router, address _weth, address _userManager) {
         swapRouter = ISwapRouter(_uniswapV3Router);
@@ -87,24 +86,24 @@ contract DCAv1 {
         // Emit Event
         console.log(user, amounts[0], amounts[0], msg.value);
 
-        // (address[] memory assets, uint256[] memory weights) = userManager
-        //     .viewUserAllocations(user);
+        (address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocations(user);
 
         // emit TestExecuted(user, amounts, msg.value, assets);
 
-        // require(
-        //     assets.length == amounts.length,
-        //     "Amounts length must match assets length"
-        // );
-        // uint256 EthAmount = msg.value;
+        require(
+            assets.length == amounts.length,
+            "Amounts length must match assets length"
+        );
+        uint256 EthAmount = msg.value;
 
         // // Convert the received ETH to WETH first
         // // the owner is now this contract (DCAv1) as an intermediary step
-        // // weth.deposit{value: EthAmount}();
+        weth.deposit{value: EthAmount}();
 
         // // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
         // // after the token swap, the user will receive the token
-        // weth.approve(address(uniswapV3Router), EthAmount);
+        weth.approve(address(swapRouter), EthAmount);
     }
 
     function execute(
@@ -123,59 +122,36 @@ contract DCAv1 {
 
         (address[] memory assets, uint256[] memory weights) = userManager
             .viewUserAllocations(user);
-        console.log(
-            "Transferring from %s with weights %s and amounts %s",
-            amounts.length,
-            weights.length,
-            assets.length
-        );
-
         require(
             assets.length == amounts.length,
             "Amounts length must match assets length"
         );
         uint256 ethAmount = msg.value;
-
+        // emit LogMe(
+        //     user,
+        //     address(weth),
+        //     ethAmount
+        //     // assets,
+        //     // userManager.isUserSubscribed(user),
+        //     // assets.length,
+        //     // amounts.length
+        // );
         // Convert the received ETH to WETH first
         // the owner is now this contract (DCAv1) as an intermediary step
-        console.log("Depositing %s ETH", ethAmount);
-        console.log(
-            "WETH balance before deposit: %s",
-            weth.balanceOf(address(this))
-        );
-        console.log(address(this).balance);
         weth.deposit{value: ethAmount}();
 
-        // weth balance after deposit
-        console.log(
-            "WETH balance after deposit: %s",
-            weth.balanceOf(address(this))
-        );
-
-        // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
-        // after the token swap, the user will receive the token
+        // // now we approve the weth to be spent by the uniswap router on behalf of this contract and then we swap it for the token
+        // // after the token swap, the user will receive the token
         weth.approve(address(swapRouter), ethAmount);
-        emit TestExecuted(user, amounts, msg.value, assets);
         for (uint i = 0; i < assets.length; i++) {
             if (assets[i] != address(0)) {
-                // console.log("Buying %s", assets[i]);
-                // console.log("Amount: %s", amounts[i]);
-                // console.log("Recipient: %s", user);
-                // console.log("weth address: %s", address(weth));
-
                 uint256 amountOut = _buyToken(
                     user,
                     address(weth),
                     assets[i],
                     amounts[i]
                 );
-
-                // check balance of user for the token
-                console.log(
-                    "Balance of user for token: %s",
-                    IERC20(assets[i]).balanceOf(user)
-                );
-                console.log("Amount out: %s", amountOut);
+                emit TokenBought(user, assets[i], amountOut);
             }
         }
     }
@@ -199,8 +175,7 @@ contract DCAv1 {
                 sqrtPriceLimitX96: 0
             });
 
-        uint256 amountOut = swapRouter.exactInputSingle(params);
-        console.log("Amount out: %s", amountOut);
+        amountOut = swapRouter.exactInputSingle(params);
         return amountOut;
     }
 }

@@ -115,7 +115,8 @@ async function buildUserOperation(
     maxFeePerGas,
     nonce,
     maxPriorityFeePerGas,
-    signer
+    signer,
+    provider
   );
   return op;
 }
@@ -126,9 +127,12 @@ async function _buildUserOperation(
   maxFeePerGas,
   nonce,
   maxPriorityFeePerGas,
-  signer
+  signer,
+  provider
 ) {
   const base = new UserOperationBuilder();
+  // read the current callGasLimit from the UserOperationBuilder
+
   const builder = base
     .useDefaults({
       sender: kernelAddress, //client account
@@ -138,6 +142,7 @@ async function _buildUserOperation(
       maxPriorityFeePerGas: maxPriorityFeePerGas,
       preVerificationGas: 50000,
     })
+    // .useMiddleware(Presets.Middleware.estimateUserOperationGas(provider))
     .useMiddleware(Presets.Middleware.EOASignature(signer))
     .useMiddleware(async (ctx) => {
       ctx.op.signature = ethers.concat([
@@ -145,7 +150,16 @@ async function _buildUserOperation(
         ctx.op.signature,
       ]);
     });
-
+  // parse bigNumber to number
+  console.log(
+    "Pre adjustment: callGasLimit:",
+    builder.getCallGasLimit().toNumber()
+  );
+  builder.setCallGasLimit(builder.getCallGasLimit() * 15);
+  console.log(
+    "After adjustment: callGasLimit:",
+    builder.getCallGasLimit().toNumber()
+  );
   return builder;
 }
 
