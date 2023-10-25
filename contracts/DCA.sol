@@ -112,13 +112,13 @@ contract DCAv1 {
     ) external payable {
         require(userManager.isUserSubscribed(user), "User is not subscribed");
 
-        // bool shouldCheckGuidelines = userManager.requireGuidelines(user);
-        // if (shouldCheckGuidelines) {
-        //     require(
-        //         checkGuidelines(user, amounts),
-        //         "Does not meet investment guidelines"
-        //     );
-        // }
+        bool shouldCheckGuidelines = userManager.requireGuidelines(user);
+        if (shouldCheckGuidelines) {
+            require(
+                checkGuidelines(user, amounts),
+                "Does not meet investment guidelines"
+            );
+        }
 
         (address[] memory assets, uint256[] memory weights) = userManager
             .viewUserAllocations(user);
@@ -127,15 +127,7 @@ contract DCAv1 {
             "Amounts length must match assets length"
         );
         uint256 ethAmount = msg.value;
-        // emit LogMe(
-        //     user,
-        //     address(weth),
-        //     ethAmount
-        //     // assets,
-        //     // userManager.isUserSubscribed(user),
-        //     // assets.length,
-        //     // amounts.length
-        // );
+
         // Convert the received ETH to WETH first
         // the owner is now this contract (DCAv1) as an intermediary step
         weth.deposit{value: ethAmount}();

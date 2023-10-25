@@ -16,12 +16,11 @@ contract ThirdPartyValidator is IKernelValidator {
     mapping(address => ThirdPartyStorage) public thirdPartyStorage;
 
     function enable(bytes calldata _data) external payable override {
-      address _provider = address(bytes20(_data[0:20]));
-      require(_provider != address(0));
-      thirdPartyStorage[msg.sender].provider = _provider;
-      emit ProviderAdded(msg.sender, _provider);
+        address _provider = address(bytes20(_data[0:20]));
+        require(_provider != address(0));
+        thirdPartyStorage[msg.sender].provider = _provider;
+        emit ProviderAdded(msg.sender, _provider);
     }
-
 
     function disable(bytes calldata) external payable override {
         address _provider = thirdPartyStorage[msg.sender].provider;
@@ -29,13 +28,11 @@ contract ThirdPartyValidator is IKernelValidator {
         emit ProviderRemoved(msg.sender, _provider);
     }
 
-
-    function validateUserOp(UserOperation calldata _userOp, bytes32 _userOpHash, uint256)
-        external
-        payable
-        override
-        returns (ValidationData validationData)
-    {
+    function validateUserOp(
+        UserOperation calldata _userOp,
+        bytes32 _userOpHash,
+        uint256 missingFunds
+    ) external payable override returns (ValidationData validationData) {
         address signer = ECDSA.recover(_userOpHash, _userOp.signature);
         if (thirdPartyStorage[msg.sender].provider == signer) {
             return ValidationData.wrap(0);
@@ -49,7 +46,10 @@ contract ThirdPartyValidator is IKernelValidator {
         return ValidationData.wrap(1); //Validation failed
     }
 
-    function validateSignature(bytes32 hash, bytes calldata signature) public view override returns (ValidationData) {
+    function validateSignature(
+        bytes32 hash,
+        bytes calldata signature
+    ) public view override returns (ValidationData) {
         address signer = ECDSA.recover(hash, signature);
         if (thirdPartyStorage[msg.sender].provider == signer) {
             return ValidationData.wrap(0);
@@ -62,7 +62,10 @@ contract ThirdPartyValidator is IKernelValidator {
         return ValidationData.wrap(1); //Validation failed
     }
 
-    function validCaller(address _caller, bytes calldata) external view override returns (bool) {
+    function validCaller(
+        address _caller,
+        bytes calldata
+    ) external view override returns (bool) {
         return (thirdPartyStorage[msg.sender].provider == _caller);
     }
 }

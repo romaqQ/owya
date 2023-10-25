@@ -170,6 +170,14 @@ async function main() {
   const validatorHandler = executionDetails[3];
   console.log("ValidatorHandler:", validatorHandler);
 
+  // const deployerAndDcaAddressBytes = ethers.AbiCoder.defaultAbiCoder().encode(
+  //   ["address", "address"],
+  //   [deployer.address, dca.target]
+  // );
+
+  // // console log deployerAndDcaAddressBytes
+  // console.log("deployerAndDcaAddressBytes:", deployerAndDcaAddressBytes);
+
   if (
     executorHandler != executorDelegate.target ||
     validatorHandler != dcaValidator.target
@@ -177,6 +185,10 @@ async function main() {
     console.log("ExecutorHandler address not set in Kernel");
     console.log("Enabling Plugin address in Kernel");
 
+    const deployerAndDcaAddressBytes = ethers.AbiCoder.defaultAbiCoder().encode(
+      ["address", "address"],
+      [deployer.address, dca.target]
+    );
     const res3 = await client.sendUserOperation(
       kernel.setCallData(
         kernel.proxy.interface.encodeFunctionData("setExecution", [
@@ -185,7 +197,7 @@ async function main() {
           dcaValidator.target,
           0, // validuntil
           0, //validafter
-          deployer.address,
+          deployerAndDcaAddressBytes,
         ])
       )
     );
