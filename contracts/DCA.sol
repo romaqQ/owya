@@ -12,6 +12,9 @@ interface IWETH is IERC20 {
     function withdraw(uint wad) external;
 }
 
+// TODO: Add a way to check if the user is subscribed to the strategy node
+// TODO: Add a way to check if the user is approved by the strategy node
+
 contract DCAv1 {
     ISwapRouter public swapRouter;
     UserManager public userManager;
@@ -110,7 +113,10 @@ contract DCAv1 {
         address user,
         uint256[] calldata amounts
     ) external payable {
-        require(userManager.isUserSubscribed(user), "User is not subscribed");
+        require(
+            userManager.isUserSubscribed(user, address(this)),
+            "User is not subscribed"
+        );
 
         bool shouldCheckGuidelines = userManager.requireGuidelines(user);
         if (shouldCheckGuidelines) {

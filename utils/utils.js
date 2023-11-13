@@ -17,6 +17,21 @@ function getTokenAddress(tokenName) {
   );
 }
 
+async function writeAddressesToFile(addresses) {
+  if (Object.keys(addresses).length === 0) {
+    console.log("Addresses object is empty.");
+  } else {
+    const data = JSON.stringify(addresses, null, 2);
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/:/g, "-");
+    const filename = `${
+      (await ethers.provider.getNetwork()).name
+    }_addresses_${timestamp}.json`;
+    fs.writeFileSync(filename, data);
+    console.log("JSON data is saved.");
+  }
+}
+
 async function getContractInstance(
   contractName,
   contractAddress,
@@ -155,6 +170,7 @@ async function _buildUserOperation(
     "Pre adjustment: callGasLimit:",
     builder.getCallGasLimit().toNumber()
   );
+  // adjust the callGasLimit as userop sdk does not estimate gas correctly
   builder.setCallGasLimit(builder.getCallGasLimit() * 15);
   console.log(
     "After adjustment: callGasLimit:",
@@ -167,4 +183,5 @@ module.exports = {
   getContractInstance,
   buildUserOperation,
   getTokenAddress,
+  writeAddressesToFile,
 };

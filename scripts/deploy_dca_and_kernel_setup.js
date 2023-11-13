@@ -1,51 +1,63 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { getContractInstance, getTokenAddress } = require("../utils/utils");
+const {
+  getContractInstance,
+  getTokenAddress,
+  writeAddressesToFile,
+} = require("../utils/utils");
+// TODO: import ContractManager from utils/contract_utils.js
+// TODO: use ContractManager
+// TODO: use getTokenAddress from utils/utils.js
+
+const { ContractManager } = require("../utils/contract_utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // Deploy UserManager contract
-  const userManager = await getContractInstance(
-    "UserManager",
-    process.env.USER_MANAGER_ADDRESS,
-    deployer
+  const wethAddress = getTokenAddress("weth");
+  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
+
+  // Usage
+  const contractDeployer = new ContractManager(
+    deployer,
+    UNISWAP_V3_ROUTER,
+    wethAddress
   );
+  const userManager = await contractDeployer.connectUserManager();
+  const dca = await contractDeployer.connectDCA();
+  const executorDelegate = await contractDeployer.connectExecutorHandler();
+  const dcaValidator = await contractDeployer.connectDcaValidator();
+
   const userManagerAddress = await userManager.getAddress();
 
   // Check if deployer can subscribe to userManager
   const deployerBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Deployer balance:", deployerBalance.toString());
 
+  // Check if DCA contract is active in UserManager
+  const isDcaActive = await userManager.isStrategyNodeActive(dca.target);
+  console.log("DCA contract active in UserManager:", isDcaActive);
+
+  if (!isDcaActive) {
+    console.log("Activating dca contract in UserManager:");
+    // Activate DCA contract in UserManager
+    const dcaActivationTx = await userManager.setStrategyNode(
+      dca.target, // strategyNode
+      deployer.address, // provider
+      true, // isActive
+      false, //needsApproval
+      true // isOnline
+    );
+    await dcaActivationTx.wait();
+    console.log("DCA contract activated in UserManager");
+  } else {
+    console.log("DCA contract already active in UserManager");
+  }
+
   // Deploy DCA contract
-  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-  const wethAddress = getTokenAddress("weth");
-  const dca = await getContractInstance(
-    "DCAv1",
-    process.env.DCA_CONTRACT_ADDRESS,
-    deployer,
-    UNISWAP_V3_ROUTER,
-    wethAddress,
-    userManagerAddress
-  );
-
-  // Deploy ExecutorHandler contract
-  const executorDelegate = await getContractInstance(
-    "ExecutorDelegate",
-    process.env.EXECUTOR_DELEGATE_CONTRACT_ADDRESS,
-    deployer
-  );
-
-  // Deploy DcaValidator contract
-  const dcaValidator = await getContractInstance(
-    "DcaValidator",
-    process.env.DCA_VALIDATOR_CONTRACT_ADDRESS,
-    deployer,
-    dca.target
-  );
 
   // check that executor within validator is set to executorHandler
   const executor = await dcaValidator.viewExecutor();
@@ -153,19 +165,7 @@ async function main() {
   };
 
   console.log("Addresses:", addresses);
-
-  if (Object.keys(addresses).length === 0) {
-    console.log("Addresses object is empty.");
-  } else {
-    const data = JSON.stringify(addresses, null, 2);
-    const now = new Date();
-    const timestamp = now.toISOString().replace(/:/g, "-");
-    const filename = `${
-      (await ethers.provider.getNetwork()).name
-    }_addresses_${timestamp}.json`;
-    fs.writeFileSync(filename, data);
-    console.log("JSON data is saved.");
-  }
+  await writeAddressesToFile(addresses);
 }
 
 main()

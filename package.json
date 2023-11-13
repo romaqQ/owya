@@ -7,10 +7,12 @@
     "hardhat": "^2.17.1"
   },
   "dependencies": {
+    "@alchemy/aa-alchemy": "^0.1.1",
+    "@alchemy/aa-core": "^0.1.1",
     "@nomicfoundation/hardhat-foundry": "^1.0.3",
     "@openzeppelin/contracts": "^4.9.3",
     "dotenv": "^16.3.1",
     "userop": "^0.3.3",
-    "viem": "^1.9.0"
+    "viem": "^1.18.1"
   }
 }
