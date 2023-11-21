@@ -11,7 +11,7 @@ class ContractManager {
 
   async connectUserManager() {
     this.userManager = await getContractInstance(
-      "UserManager",
+      "UniversalUserManager",
       process.env.USER_MANAGER_CONTRACT_ADDRESS,
       this.deployer
     );
@@ -20,7 +20,7 @@ class ContractManager {
 
   async connectDCA() {
     this.dca = await getContractInstance(
-      "DCA",
+      "DCAv1",
       process.env.DCA_CONTRACT_ADDRESS,
       this.deployer,
       this.uniswapV3Router,
@@ -51,13 +51,13 @@ class ContractManager {
 
   async deployAllContracts() {
     // Deploy UserManager contract
-    await this.deployUserManager();
+    await this.connectUserManager();
     // Deploy ExecutorHandler contract
-    await this.deployExecutorHandler();
+    await this.connectExecutorHandler();
     // Deploy DCA contract
-    await this.deployDCA();
+    await this.connectDCA();
     // Deploy DcaValidator contract
-    await this.deployDcaValidator();
+    await this.connectDcaValidator();
   }
 
   // return the userManager contract
@@ -82,8 +82,8 @@ class ContractManager {
 }
 
 class UserManagerAPI extends ContractManager {
-  async viewUserAllocations(address) {
-    return await this.userManager.viewUserAllocations(address);
+  async viewUserAllocations(address, strategyNode) {
+    return await this.userManager.viewUserAllocations(address, strategyNode);
   }
 }
 

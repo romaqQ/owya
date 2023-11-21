@@ -37,18 +37,19 @@ async function main() {
   console.log("Deployer balance:", deployerBalance.toString());
 
   // Check if DCA contract is active in UserManager
-  const isDcaActive = await userManager.isStrategyNodeActive(dca.target);
+  const stratNode = await userManager.strategyNodes(dca.target);
+  const isDcaActive = stratNode.isActive;
   console.log("DCA contract active in UserManager:", isDcaActive);
 
   if (!isDcaActive) {
     console.log("Activating dca contract in UserManager:");
     // Activate DCA contract in UserManager
-    const dcaActivationTx = await userManager.setStrategyNode(
+    const dcaActivationTx = await userManager.createStrategyNode(
       dca.target, // strategyNode
       deployer.address, // provider
       true, // isActive
-      false, //needsApproval
-      true // isOnline
+      true, // isOnline
+      false //needsApproval
     );
     await dcaActivationTx.wait();
     console.log("DCA contract activated in UserManager");
@@ -58,14 +59,6 @@ async function main() {
 
   // Deploy DCA contract
   console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-
-  // check that executor within validator is set to executorHandler
-  const executor = await dcaValidator.viewExecutor();
-  // assert that the dca contract address is the same as the executor address in the validator
-  console.log("DCA executor:", executor);
-  if (executor != dca.target) {
-    throw new Error("ExecutorHandler address not set in DcaValidator");
-  }
 
   // Kernel Owner Account
   console.log("Kernel Owner Account:", kernelOwner.address);
@@ -110,7 +103,10 @@ async function main() {
   }
 
   // Check if kernel is subscribed to UserManager
-  const isSubscribedKernel = await userManager.isUserSubscribed(kernelAddress);
+  const isSubscribedKernel = await userManager.isUserSubscribed(
+    kernelAddress,
+    dca.target
+  );
 
   if (isSubscribedKernel) {
     console.log(
@@ -125,10 +121,12 @@ async function main() {
         to: userManagerAddress, // to
         value: 0, // value
         data: userManager.interface.encodeFunctionData("subscribe", [
+          dca.target, // strategyNode
           [uniAddress, uniAddress], // assets
           [7500, 2500], // weights
+          ethers.constants.AddressZero, // baseAsset as ETH
           ethers.parseEther("0.001"),
-          true,
+          true, // isGuidelineCheckRequired
         ]), // data
         operation: 0, // operation Operation.Call
       })
@@ -138,17 +136,24 @@ async function main() {
     console.log("Kernel subscribed to UserManager");
 
     // Check if kernel is subscribed to UserManager
-    const isSubscribed = await userManager.isUserSubscribed(kernelAddress);
+    const isSubscribed = await userManager.isUserSubscribed(
+      kernelAddress,
+      dca.target
+    );
     console.log("Kernel subscribed to UserManager:", isSubscribed);
   }
 
   // View user allocation
-  const userAllocation = await userManager.viewUserAllocations(kernelAddress);
+  const userAllocation = await userManager.viewUserAllocations(
+    kernelAddress,
+    dca.target
+  );
   console.log("User allocation:", userAllocation);
 
   // View user subscription
   const userSubscriptionAmount = await userManager.userSubscriptionAmount(
-    kernelAddress
+    kernelAddress,
+    dca.target
   );
   console.log(
     "User subscription: %s Ether",

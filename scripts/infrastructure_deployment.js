@@ -6,7 +6,7 @@ async function main() {
   console.log("Deploying contracts with the account:", deployer.address);
   // Deploy UserManager contract
   const userManager = await getContractInstance(
-    "UserManager",
+    "UniversalUserManager",
     process.env.USER_MANAGER_ADDRESS,
     deployer
   );

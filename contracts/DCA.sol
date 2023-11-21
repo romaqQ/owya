@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.9;
 
-import "./UserManager.sol";
+import "./UniversalUserManager.sol";
 import "hardhat/console.sol";
 import "./token/IERC20.sol";
 import "./uniswap/ISwapRouter.sol";
@@ -17,7 +17,7 @@ interface IWETH is IERC20 {
 
 contract DCAv1 {
     ISwapRouter public swapRouter;
-    UserManager public userManager;
+    UniversalUserManager public userManager;
     uint24 public fee = 3000; // 0.3% fee tier
     address owner;
     IWETH public weth;
@@ -38,7 +38,7 @@ contract DCAv1 {
         swapRouter = ISwapRouter(_uniswapV3Router);
         weth = IWETH(_weth);
         // weth = IWETH(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // mainnet
-        userManager = UserManager(_userManager);
+        userManager = UniversalUserManager(_userManager);
         owner = msg.sender;
     }
 
@@ -67,9 +67,10 @@ contract DCAv1 {
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
-        
-(address[] memory assets, uint256[] memory weights) = userManager
+
+        (address[] memory assets, uint256[] memory weights) = userManager
             .viewUserAllocation(user, address(this));
+
         for (uint i = 0; i < assets.length; i++) {
             uint256 targetWeight = weights[i];
             uint256 actualWeight = amounts[i] / totalAmount;
@@ -108,6 +109,66 @@ contract DCAv1 {
         weth.approve(address(swapRouter), EthAmount);
     }
 
+    function executeErc20(
+        address user,
+        address tokenAddress,
+        uint256[] calldata amounts,
+        uint256 totalAmount
+    ) external payable {
+        require(
+            userManager.isUserSubscribed(user, address(this)),
+            "User is not subscribed"
+        );
+
+        // call the viewUserBaseAsset function of the UserManager contract
+        // where teh mapping looks like this:     mapping(address => mapping(address => address)) public userBaseAsset;
+
+        require(
+            userManager.userBaseAsset(user, address(this)) == tokenAddress,
+            "Provided token address does not match subscribed base asset address"
+        );
+
+        IERC20 ierc20 = IERC20(tokenAddress);
+
+        // Approve the Uniswap contract to spend the base asset
+        // to be spent by the uniswap router on behalf of this contract and then we swap it for the token
+        require(
+            ierc20.approve(address(swapRouter), totalAmount),
+            "Token approval failed"
+        );
+
+        bool shouldCheckGuidelines = userManager.isGuidelineCheckRequired(
+            user,
+            address(this)
+        );
+        if (shouldCheckGuidelines) {
+            require(
+                checkGuidelines(user, amounts),
+                "Does not meet investment guidelines"
+            );
+        }
+
+        (address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocation(user, address(this));
+        require(
+            assets.length == amounts.length,
+            "Amounts length must match assets length"
+        );
+
+        // // after the token swap, the user will receive the token
+        for (uint i = 0; i < assets.length; i++) {
+            if (assets[i] != address(0)) {
+                uint256 amountOut = _buyToken(
+                    user,
+                    address(ierc20),
+                    assets[i],
+                    amounts[i]
+                );
+                emit TokenBought(user, assets[i], amountOut);
+            }
+        }
+    }
+
     function execute(
         address user,
         uint256[] calldata amounts
@@ -117,7 +178,11 @@ contract DCAv1 {
             "User is not subscribed"
         );
 
-        bool shouldCheckGuidelines = userManager.requireGuidelines(user);
+        bool shouldCheckGuidelines = userManager.isGuidelineCheckRequired(
+            user,
+            address(this)
+        );
+
         if (shouldCheckGuidelines) {
             require(
                 checkGuidelines(user, amounts),

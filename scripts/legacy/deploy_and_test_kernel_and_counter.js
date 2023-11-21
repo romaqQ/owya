@@ -5,8 +5,8 @@ const {
   getContractInstance,
   getTokenAddress,
   buildUserOperation,
-} = require("../utils/utils");
-const KernelAccountAbi = require("../abi/KernelAccountAbi");
+} = require("../../utils/utils");
+const KernelAccountAbi = require("../../abi/KernelAccountAbi");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();

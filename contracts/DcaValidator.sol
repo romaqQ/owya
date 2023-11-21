@@ -10,6 +10,9 @@ struct ThirdPartyStorage {
     address executor;
 }
 
+// TODO: Check if ECDSA is required to retrieve userOp sender signature check
+//       i.e. is it required to check the signature or is it enough to check the sender address
+
 contract DcaValidator is IKernelValidator {
     event ProviderAdded(
         address indexed kernel,
@@ -26,37 +29,39 @@ contract DcaValidator is IKernelValidator {
         address executor,
         address sender,
         address provider,
-        bytes4 functionSignature
+        bytes4 functionSignature,
+        address userOpSender,
+        address signer
     );
 
-    mapping(address => ThirdPartyStorage) public thirdPartyStorage;
+    mapping(address => mapping(address => ThirdPartyStorage))
+        public thirdPartyStorage;
     mapping(address => address) public owner;
-    mapping(address => address) public executor;
 
     constructor(address _executor) {
-        executor[msg.sender] = _executor;
         owner[msg.sender] = msg.sender;
     }
 
     function enable(bytes calldata _data) external payable override {
         address _provider = address(bytes20(_data[12:32]));
         require(_provider != address(0));
-        thirdPartyStorage[msg.sender].provider = _provider;
-        address _exectutor = address(bytes20(_data[44:64]));
-        thirdPartyStorage[msg.sender].executor = _exectutor;
-        emit ProviderAdded(msg.sender, _provider, _exectutor);
+        address _executor = address(bytes20(_data[44:64]));
+        thirdPartyStorage[msg.sender][_executor].provider = _provider;
+        thirdPartyStorage[msg.sender][_executor].executor = _executor;
+        emit ProviderAdded(msg.sender, _provider, _executor);
     }
 
-    function disable(bytes calldata) external payable override {
-        address _provider = thirdPartyStorage[msg.sender].provider;
-        address _executor = thirdPartyStorage[msg.sender].executor;
-        delete thirdPartyStorage[msg.sender];
+    function disable(bytes calldata _data) external payable override {
+        address _executor = address(bytes20(_data[12:32]));
+        require(_executor != address(0));
+        address _provider = thirdPartyStorage[msg.sender][_executor].provider;
+        delete thirdPartyStorage[msg.sender][_executor];
         emit ProviderRemoved(msg.sender, _provider, _executor);
     }
 
-    function viewExecutor() external view returns (address) {
-        return executor[msg.sender];
-    }
+    // function viewExecutor() external view returns (address) {
+    //     return executor[msg.sender];
+    // }
 
     modifier onlyOwner() {
         require(
@@ -98,41 +103,48 @@ contract DcaValidator is IKernelValidator {
         address dcaContract = address(bytes20(userOpCallData[16:36]));
         bytes4 functionSignature = bytes4(userOpCallData[0:4]);
 
-        emit Log(
-            dcaContract,
-            thirdPartyStorage[msg.sender].executor,
-            msg.sender,
-            thirdPartyStorage[msg.sender].provider,
-            functionSignature
-        );
         // check if the provided dcaContract is the same as the one stored in the executor mapping
-        if (dcaContract != thirdPartyStorage[msg.sender].executor) {
+        if (
+            dcaContract != thirdPartyStorage[msg.sender][dcaContract].executor
+        ) {
             return ValidationData.wrap(1); //Validation failed
         }
         address signer = ECDSA.recover(_userOpHash, _userOp.signature);
-        if (thirdPartyStorage[msg.sender].provider == signer) {
+        emit Log(
+            dcaContract,
+            thirdPartyStorage[msg.sender][dcaContract].executor,
+            msg.sender,
+            thirdPartyStorage[msg.sender][dcaContract].provider,
+            functionSignature,
+            _userOp.sender,
+            signer
+        );
+
+        if (thirdPartyStorage[msg.sender][dcaContract].provider == signer) {
             return ValidationData.wrap(0);
         }
         //TODO: do we need this?
         bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
         signer = ECDSA.recover(hash, _userOp.signature);
-        if (thirdPartyStorage[msg.sender].provider == signer) {
+        if (thirdPartyStorage[msg.sender][dcaContract].provider == signer) {
             return ValidationData.wrap(0);
         }
         return ValidationData.wrap(1); //Validation failed
     }
 
+    // only relevant if one wants to use the validator as the default validator for a given kernel
+    // in that sense we only care about if the owner of the validator is the caller
     function validateSignature(
         bytes32 hash,
         bytes calldata signature
     ) public view override returns (ValidationData) {
         address signer = ECDSA.recover(hash, signature);
-        if (thirdPartyStorage[msg.sender].provider == signer) {
+        if (owner[msg.sender] == signer) {
             return ValidationData.wrap(0);
         }
         bytes32 ethHash = ECDSA.toEthSignedMessageHash(hash);
         signer = ECDSA.recover(ethHash, signature);
-        if (thirdPartyStorage[msg.sender].provider == signer) {
+        if (owner[msg.sender] == signer) {
             return ValidationData.wrap(0);
         }
         return ValidationData.wrap(1); //Validation failed
@@ -142,6 +154,7 @@ contract DcaValidator is IKernelValidator {
         address _caller,
         bytes calldata
     ) external view override returns (bool) {
-        return (thirdPartyStorage[msg.sender].provider == _caller);
+        revert("not implemented");
+        // return (thirdPartyStorage[msg.sender].provider == _caller);
     }
 }
