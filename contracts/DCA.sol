@@ -67,10 +67,9 @@ contract DCAv1 {
         for (uint i = 0; i < amounts.length; i++) {
             totalAmount += amounts[i];
         }
-
-        (address[] memory assets, uint256[] memory weights) = userManager
-            .viewUserAllocations(user);
-
+        
+(address[] memory assets, uint256[] memory weights) = userManager
+            .viewUserAllocation(user, address(this));
         for (uint i = 0; i < assets.length; i++) {
             uint256 targetWeight = weights[i];
             uint256 actualWeight = amounts[i] / totalAmount;
@@ -90,7 +89,7 @@ contract DCAv1 {
         console.log(user, amounts[0], amounts[0], msg.value);
 
         (address[] memory assets, uint256[] memory weights) = userManager
-            .viewUserAllocations(user);
+            .viewUserAllocation(user, address(this));
 
         // emit TestExecuted(user, amounts, msg.value, assets);
 
@@ -127,7 +126,7 @@ contract DCAv1 {
         }
 
         (address[] memory assets, uint256[] memory weights) = userManager
-            .viewUserAllocations(user);
+            .viewUserAllocation(user, address(this));
         require(
             assets.length == amounts.length,
             "Amounts length must match assets length"

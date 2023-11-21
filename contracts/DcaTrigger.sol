@@ -32,13 +32,15 @@ contract DcaTrigger {
     }
 
     // call the subscribe function of the UserManager contract
+    //TODO: check
     function subscribe(
+        address strategyNode,
         address[] memory assets,
         uint256[] memory weights,
-        uint256 amount,
-        bool checkGuidelines
+        uint256 amount
+        // bool checkGuidelines
     ) external {
-        userManager.subscribe(assets, weights, amount, checkGuidelines);
+        userManager.subscribe(strategyNode, assets, weights, amount);
     }
 
     receive() external payable {}

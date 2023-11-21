@@ -67,6 +67,11 @@ contract UserManager {
         _;
     }
 
+    //TODO:
+    function requireGuidelines(address user) public pure returns (bool) {
+        return true;
+    }
+
     function setStrategyNode(
         address strategyNodeAddress,
         address provider,

@@ -21,3 +21,6 @@
 [submodule "lib/v3-core"]
 	path = lib/v3-core
 	url = https://github.com/Uniswap/v3-core
+[submodule "lib/I4337"]
+	path = lib/I4337
+	url = https://github.com/leekt/I4337
