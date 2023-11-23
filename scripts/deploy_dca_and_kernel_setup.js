@@ -1,6 +1,5 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
-const fs = require("fs");
 const {
   getContractInstance,
   getTokenAddress,
@@ -124,7 +123,7 @@ async function main() {
           dca.target, // strategyNode
           [uniAddress, uniAddress], // assets
           [7500, 2500], // weights
-          ethers.constants.AddressZero, // baseAsset as ETH
+          ethers.ZeroAddress, // baseAsset as ETH
           ethers.parseEther("0.001"),
           true, // isGuidelineCheckRequired
         ]), // data
@@ -144,7 +143,7 @@ async function main() {
   }
 
   // View user allocation
-  const userAllocation = await userManager.viewUserAllocations(
+  const userAllocation = await userManager.viewUserAllocation(
     kernelAddress,
     dca.target
   );

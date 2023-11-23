@@ -1,7 +1,7 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { getContractInstance } = require("../utils/utils");
+const { getContractInstance } = require("../../utils/utils");
 
 async function main() {
   const [deployer] = await ethers.getSigners();

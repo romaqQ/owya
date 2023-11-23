@@ -5,27 +5,29 @@ pragma solidity ^0.8.9;
 import "solady/utils/ECDSA.sol";
 import "kernel/interfaces/IValidator.sol";
 
+import "hardhat/console.sol";
 struct ThirdPartyStorage {
     address provider;
-    address executor;
+    uint256 validUntil;
+    uint256 validAfter;
 }
 
 // TODO: Check if ECDSA is required to retrieve userOp sender signature check
 //       i.e. is it required to check the signature or is it enough to check the sender address
+// TODO: Check the appropriate subscribed amount of base asset that is passed as calldata
 
 contract DcaValidator is IKernelValidator {
-    event ProviderAdded(
+    event StrategyAdded(
         address indexed kernel,
         address indexed provider,
         address indexed executor
     );
-    event ProviderRemoved(
+    event StrategyRemoved(
         address indexed kernel,
         address indexed provider,
         address indexed executor
     );
     event Log(
-        address dcaContract,
         address executor,
         address sender,
         address provider,
@@ -33,10 +35,10 @@ contract DcaValidator is IKernelValidator {
         address userOpSender,
         address signer
     );
-
-    mapping(address => mapping(address => ThirdPartyStorage))
-        public thirdPartyStorage;
     mapping(address => address) public owner;
+    // executor => kernel => provider
+    mapping(address => mapping(address => ThirdPartyStorage))
+        public executorProvider;
 
     constructor(address _executor) {
         owner[msg.sender] = msg.sender;
@@ -46,22 +48,19 @@ contract DcaValidator is IKernelValidator {
         address _provider = address(bytes20(_data[12:32]));
         require(_provider != address(0));
         address _executor = address(bytes20(_data[44:64]));
-        thirdPartyStorage[msg.sender][_executor].provider = _provider;
-        thirdPartyStorage[msg.sender][_executor].executor = _executor;
-        emit ProviderAdded(msg.sender, _provider, _executor);
+        executorProvider[_executor][msg.sender].provider = _provider;
+
+        // executorProvider[_executor][msg.sender] = _provider;
+        emit StrategyAdded(msg.sender, _provider, _executor);
     }
 
     function disable(bytes calldata _data) external payable override {
         address _executor = address(bytes20(_data[12:32]));
         require(_executor != address(0));
-        address _provider = thirdPartyStorage[msg.sender][_executor].provider;
-        delete thirdPartyStorage[msg.sender][_executor];
-        emit ProviderRemoved(msg.sender, _provider, _executor);
+        address _provider = executorProvider[_executor][msg.sender].provider;
+        delete executorProvider[_executor][msg.sender];
+        emit StrategyRemoved(msg.sender, _provider, _executor);
     }
-
-    // function viewExecutor() external view returns (address) {
-    //     return executor[msg.sender];
-    // }
 
     modifier onlyOwner() {
         require(
@@ -97,36 +96,26 @@ contract DcaValidator is IKernelValidator {
         }
         // this is the same as doing:
         // bytes calldata userOpCallData = _userOp.callData;
-        // dcaContract = address(bytes20(userOpCallData[16:36]));
+        // executor = address(bytes20(userOpCallData[16:36]));
         // but we use assembly to avoid copying the data to memory
 
-        address dcaContract = address(bytes20(userOpCallData[16:36]));
+        address executor = address(bytes20(userOpCallData[16:36]));
         bytes4 functionSignature = bytes4(userOpCallData[0:4]);
 
         // check if the provided dcaContract is the same as the one stored in the executor mapping
-        if (
-            dcaContract != thirdPartyStorage[msg.sender][dcaContract].executor
-        ) {
-            return ValidationData.wrap(1); //Validation failed
-        }
-        address signer = ECDSA.recover(_userOpHash, _userOp.signature);
+        //TODO: do we need to check for the userOP sender or signer or is it irrelevant?
+        bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
+        address signer = ECDSA.recover(hash, _userOp.signature);
         emit Log(
-            dcaContract,
-            thirdPartyStorage[msg.sender][dcaContract].executor,
+            executor,
             msg.sender,
-            thirdPartyStorage[msg.sender][dcaContract].provider,
+            executorProvider[executor][msg.sender].provider,
             functionSignature,
             _userOp.sender,
             signer
         );
 
-        if (thirdPartyStorage[msg.sender][dcaContract].provider == signer) {
-            return ValidationData.wrap(0);
-        }
-        //TODO: do we need this?
-        bytes32 hash = ECDSA.toEthSignedMessageHash(_userOpHash);
-        signer = ECDSA.recover(hash, _userOp.signature);
-        if (thirdPartyStorage[msg.sender][dcaContract].provider == signer) {
+        if (executorProvider[executor][msg.sender].provider == signer) {
             return ValidationData.wrap(0);
         }
         return ValidationData.wrap(1); //Validation failed

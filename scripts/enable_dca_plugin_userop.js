@@ -2,59 +2,32 @@ const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
 const KernelAccountAbi = require("../abi/KernelAccountAbi");
-const { getContractInstance, getTokenAddress } = require("../utils/utils");
+const { getTokenAddress } = require("../utils/utils");
+const { ContractManager } = require("../utils/contract_utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
 
-  // Deploy UserManager contract
-  const userManager = await getContractInstance(
-    "UserManager",
-    process.env.USER_MANAGER_ADDRESS,
-    deployer
+  const wethAddress = getTokenAddress("weth");
+  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
+
+  // Usage
+  const contractDeployer = new ContractManager(
+    deployer,
+    UNISWAP_V3_ROUTER,
+    wethAddress
   );
+  const userManager = await contractDeployer.connectUserManager();
+  const dca = await contractDeployer.connectDCA();
+  const executorDelegate = await contractDeployer.connectExecutorHandler();
+  const dcaValidator = await contractDeployer.connectDcaValidator();
+
   const userManagerAddress = await userManager.getAddress();
 
   // Check if deployer can subscribe to userManager
   const deployerBalance = await deployer.provider.getBalance(deployer.address);
   console.log("Deployer balance:", deployerBalance.toString());
-
-  // Deploy DCA contract
-  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
-  console.log("UNIv3 address:", UNISWAP_V3_ROUTER);
-  const wethAddress = getTokenAddress("weth");
-  const dca = await getContractInstance(
-    "DCAv1",
-    process.env.DCA_CONTRACT_ADDRESS,
-    deployer,
-    UNISWAP_V3_ROUTER,
-    wethAddress,
-    userManagerAddress
-  );
-
-  // Deploy ExecutorHandler contract
-  const executorDelegate = await getContractInstance(
-    "ExecutorDelegate",
-    process.env.EXECUTOR_DELEGATE_CONTRACT_ADDRESS,
-    deployer
-  );
-
-  // Deploy DcaValidator contract
-  const dcaValidator = await getContractInstance(
-    "DcaValidator",
-    process.env.DCA_VALIDATOR_CONTRACT_ADDRESS,
-    deployer,
-    dca.target
-  );
-
-  // check that executor within validator is set to executorHandler
-  const executor = await dcaValidator.viewExecutor();
-  // assert that the dca contract address is the same as the executor address in the validator
-  console.log("DCA executor:", executor);
-  if (executor != dca.target) {
-    throw new Error("ExecutorHandler address not set in DcaValidator");
-  }
 
   // Kernel Owner Account
   console.log("Kernel Owner Account:", kernelOwner.address);
@@ -99,7 +72,10 @@ async function main() {
   }
 
   // Check if kernel is subscribed to UserManager
-  const isSubscribedKernel = await userManager.isUserSubscribed(kernelAddress);
+  const isSubscribedKernel = await userManager.isUserSubscribed(
+    kernelAddress,
+    dca.target
+  );
   const uniAddress = getTokenAddress("uni");
   if (isSubscribedKernel) {
     console.log(
@@ -113,10 +89,12 @@ async function main() {
         to: userManagerAddress, // to
         value: 0, // value
         data: userManager.interface.encodeFunctionData("subscribe", [
-          [uniAddress, uniAddress],
-          [7500, 2500],
+          dca.target, // strategyNode
+          [uniAddress, uniAddress], // assets
+          [7500, 2500], // weights
+          ethers.ZeroAddress, // baseAsset as ETH
           ethers.parseEther("0.001"),
-          true,
+          true, // isGuidelineCheckRequired
         ]), // data
         operation: 0, // operation Operation.Call
       })
@@ -126,19 +104,24 @@ async function main() {
     console.log("Kernel subscribed to UserManager");
 
     // Check if kernel is subscribed to UserManager
-    const isSubscribed = await userManager.isUserSubscribed(kernelAddress);
+    const isSubscribed = await userManager.isUserSubscribed(
+      kernelAddress,
+      dca.target
+    );
     console.log("Kernel subscribed to UserManager:", isSubscribed);
   }
 
   // View user allocation
-  const [userAssets, userWeights] = await userManager.viewUserAllocations(
-    kernelAddress
+  const [userAssets, userWeights] = await userManager.viewUserAllocation(
+    kernelAddress,
+    dca.target
   );
   console.log("User %s allocation: %s", userAssets, userWeights);
 
   // View user subscription
   const userSubscriptionAmount = await userManager.userSubscriptionAmount(
-    kernelAddress
+    kernelAddress,
+    dca.target
   );
   console.log(
     "User subscription: %s Ether",

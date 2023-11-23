@@ -1,7 +1,8 @@
 const { ethers } = require("hardhat");
 const userop = require("userop");
 const fs = require("fs");
-const { getContractInstance, buildUserOperation } = require("../utils/utils");
+const { getTokenAddress, buildUserOperation } = require("../utils/utils");
+const { ContractManager } = require("../utils/contract_utils");
 
 async function main() {
   const [deployer, thirdParty, kernelOwner] = await ethers.getSigners();
@@ -15,19 +16,28 @@ async function main() {
   const kernelAddress = kernel.getSender();
   console.log(`Kernel address: ${kernelAddress}`);
 
-  // Instantiate the UserManager contract
-  const userManager = await getContractInstance(
-    "UserManager",
-    process.env.USER_MANAGER_ADDRESS,
-    deployer
+  const wethAddress = getTokenAddress("weth");
+  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
+
+  // Usage
+  const contractDeployer = new ContractManager(
+    deployer,
+    UNISWAP_V3_ROUTER,
+    wethAddress
   );
 
+  const userManager = await contractDeployer.connectUserManager();
+  const dca = await contractDeployer.connectDCA();
+
   // Check if kernel is subscribed to UserManager
-  const isSubscribedKernel = await userManager.isUserSubscribed(kernelAddress);
+  const isSubscribedKernel = await userManager.isUserSubscribed(
+    kernelAddress,
+    dca.target
+  );
 
   // Query the User subscription Amount
   const userSubscriptionAmount = BigInt(
-    await userManager.userSubscriptionAmount(kernelAddress)
+    await userManager.userSubscriptionAmount(kernelAddress, dca.target)
   );
   console.log(
     "User subscription: %s Ether",
@@ -58,8 +68,9 @@ async function main() {
   }
 
   // View user allocation
-  const [userAssets, userWeights] = await userManager.viewUserAllocations(
-    kernelAddress
+  const [userAssets, userWeights] = await userManager.viewUserAllocation(
+    kernelAddress,
+    dca.target
   );
   console.log(
     "User %s allocation: %s %s",
