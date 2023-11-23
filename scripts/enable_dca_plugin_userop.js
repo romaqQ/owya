@@ -21,7 +21,7 @@ async function main() {
   const userManager = await contractDeployer.connectUserManager();
   const dca = await contractDeployer.connectDCA();
   const executorDelegate = await contractDeployer.connectExecutorHandler();
-  const dcaValidator = await contractDeployer.connectDcaValidator();
+  const universalValidator = await contractDeployer.connectValidator();
 
   const userManagerAddress = await userManager.getAddress();
 
@@ -163,7 +163,7 @@ async function main() {
 
   if (
     executorHandler != executorDelegate.target ||
-    validatorHandler != dcaValidator.target
+    validatorHandler != universalValidator.target
   ) {
     console.log("ExecutorHandler address not set in Kernel");
     console.log("Enabling Plugin address in Kernel");
@@ -177,7 +177,7 @@ async function main() {
         kernel.proxy.interface.encodeFunctionData("setExecution", [
           selector,
           executorDelegate.target,
-          dcaValidator.target,
+          universalValidator.target,
           0, // validuntil
           0, //validafter
           deployerAndDcaAddressBytes,

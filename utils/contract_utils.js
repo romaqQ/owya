@@ -39,14 +39,14 @@ class ContractManager {
     return this.executorDelegate;
   }
 
-  async connectDcaValidator() {
-    this.dcaValidator = await getContractInstance(
-      "DcaValidator",
-      process.env.DCA_VALIDATOR_CONTRACT_ADDRESS,
+  async connectValidator() {
+    this.Validator = await getContractInstance(
+      "UniversalValidator",
+      process.env.VALIDATOR_CONTRACT_ADDRESS,
       this.deployer,
       this.dca.target
     );
-    return this.dcaValidator;
+    return this.Validator;
   }
 
   async deployAllContracts() {
@@ -57,7 +57,7 @@ class ContractManager {
     // Deploy DCA contract
     await this.connectDCA();
     // Deploy DcaValidator contract
-    await this.connectDcaValidator();
+    await this.connectValidator();
   }
 
   // return the userManager contract
@@ -76,7 +76,7 @@ class ContractManager {
   }
 
   // return the dcaValidator contract
-  getDcaValidator() {
+  getValidator() {
     return this.dcaValidator;
   }
 }

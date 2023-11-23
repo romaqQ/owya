@@ -1,17 +1,25 @@
 const { ethers } = require("hardhat");
 const { getContractInstance, getTokenAddress } = require("../utils/utils");
+const { ContractManager } = require("../utils/contract_utils");
 
 async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying contracts with the account:", deployer.address);
   // Deploy UserManager contract
-  const userManager = await getContractInstance(
-    "UniversalUserManager",
-    process.env.USER_MANAGER_ADDRESS,
-    deployer
-  );
+  const wethAddress = getTokenAddress("weth");
+  UNISWAP_V3_ROUTER = process.env.UNISWAP_V3_ROUTER;
 
+  // Usage
+  const contractDeployer = new ContractManager(
+    deployer,
+    UNISWAP_V3_ROUTER,
+    wethAddress
+  );
+  const userManager = await contractDeployer.connectUserManager();
+  const executorDelegate = await contractDeployer.connectExecutorHandler();
+  const universalValidator = await contractDeployer.connectValidator();
   const userManagerAddress = await userManager.getAddress();
+
   // Deploy UserManager contract
   const kernelFactory = await getContractInstance(
     "KernelFactory",
@@ -21,19 +29,13 @@ async function main() {
     process.env.ENTRY_POINT
   );
   const kernelFactoryAddress = await kernelFactory.getAddress();
-
-  // Deploy ExecutorHandler contract
-  const executorDelegate = await getContractInstance(
-    "ExecutorDelegate",
-    process.env.EXECUTOR_DELEGATE_CONTRACT_ADDRESS,
-    deployer
-  );
   const executorDelegateAddress = await executorDelegate.getAddress();
 
   console.log("All infrastructure contracts deployed:");
-  console.log("UserManager", userManagerAddress);
-  console.log("KernelFactory", kernelFactoryAddress);
-  console.log("executorDelegate", executorDelegateAddress);
+  console.log("UserManager ", userManagerAddress);
+  console.log("KernelFactory ", kernelFactoryAddress);
+  console.log("executorDelegate ", executorDelegateAddress);
+  console.log("Validator ", universalValidator.target);
 }
 
 main()

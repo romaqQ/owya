@@ -16,7 +16,7 @@ struct ThirdPartyStorage {
 //       i.e. is it required to check the signature or is it enough to check the sender address
 // TODO: Check the appropriate subscribed amount of base asset that is passed as calldata
 
-contract DcaValidator is IKernelValidator {
+contract UniversalValidator is IKernelValidator {
     event StrategyAdded(
         address indexed kernel,
         address indexed provider,

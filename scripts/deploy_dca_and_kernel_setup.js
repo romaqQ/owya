@@ -27,7 +27,7 @@ async function main() {
   const userManager = await contractDeployer.connectUserManager();
   const dca = await contractDeployer.connectDCA();
   const executorDelegate = await contractDeployer.connectExecutorHandler();
-  const dcaValidator = await contractDeployer.connectDcaValidator();
+  const universalValidator = await contractDeployer.connectValidator();
 
   const userManagerAddress = await userManager.getAddress();
 
@@ -164,7 +164,7 @@ async function main() {
     UserManager: userManager.target,
     DCA: dca.target,
     ExecutorHandler: executorDelegate.target,
-    DcaValidator: dcaValidator.target,
+    universalValidator: universalValidator.target,
     Kernel: kernelAddress,
   };
 
